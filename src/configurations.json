@@ -1,0 +1,24 @@
+{
+  "backgroundType": "plain",
+  "plainBackgroundMode": "daylight",
+  "devIntro": "@GrantBirki",
+  "devDesc": "| Security | Python + JS + Ruby | Open Source ",
+  "icons": [
+    {
+      "image": "fa-github",
+      "url": "https://github.com/GrantBirki"
+    },
+    {
+      "image": "fa-twitter",
+      "url": "https://twitter.com/GrantBirki"
+    },
+    {
+      "image": "fa-medium",
+      "url": "https://birki.medium.com/"
+    },
+    {
+      "image": "fa-linkedin",
+      "url": "https://www.linkedin.com/in/grantbirkinbine/"
+    }
+  ]
+}
