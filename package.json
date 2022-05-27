@@ -1,7 +1,7 @@
 {
-  "name": "beautiful-vcard",
+  "name": "birki.io",
   "version": "0.1.0",
-  "homepage": "./",
+  "homepage": "https://birki.io",
   "private": true,
   "dependencies": {
     "react": "^16.8.4",
