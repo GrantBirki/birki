@@ -18,3 +18,13 @@ npm start
 ```shell
 npm run build
 ```
+
+## Deploy to GitHub Pages 🚀
+
+To deploy to GitHub Pages, run the following command:
+
+```shell
+npm run deploy
+```
+
+> Don't forget to edit your `CNAME` file, the `package.json` file, and to update your Pages branch to `gh-pages` in your GitHub settings
