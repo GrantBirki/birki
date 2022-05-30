@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/birki.io/static/css/main.3a9ce94d.css",
-    "main.js": "/birki.io/static/js/main.37a59935.js",
-    "index.html": "/birki.io/index.html",
-    "main.3a9ce94d.css.map": "/birki.io/static/css/main.3a9ce94d.css.map",
-    "main.37a59935.js.map": "/birki.io/static/js/main.37a59935.js.map"
+    "main.css": "/birki/static/css/main.3a9ce94d.css",
+    "main.js": "/birki/static/js/main.32d2fe2e.js",
+    "index.html": "/birki/index.html",
+    "main.3a9ce94d.css.map": "/birki/static/css/main.3a9ce94d.css.map",
+    "main.32d2fe2e.js.map": "/birki/static/js/main.32d2fe2e.js.map"
   },
   "entrypoints": [
     "static/css/main.3a9ce94d.css",
-    "static/js/main.37a59935.js"
+    "static/js/main.32d2fe2e.js"
   ]
 }
