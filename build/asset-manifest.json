@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/birki/static/css/main.3a9ce94d.css",
+    "main.js": "/birki/static/js/main.32d2fe2e.js",
+    "index.html": "/birki/index.html",
+    "main.3a9ce94d.css.map": "/birki/static/css/main.3a9ce94d.css.map",
+    "main.32d2fe2e.js.map": "/birki/static/js/main.32d2fe2e.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.3a9ce94d.css",
+    "static/js/main.32d2fe2e.js"
+  ]
+}
