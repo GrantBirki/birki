@@ -1,7 +1,7 @@
 {
   "name": "birki.io",
   "version": "0.1.0",
-  "homepage": "https://grantbirki.github.io/birki",
+  "homepage": "https://grantbirki.github.io",
   "private": true,
   "dependencies": {
     "react": "^16.8.4",
@@ -15,7 +15,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "predeploy": "npm run build",
+    "predeploy": "npm run build && cp CNAME build/CNAME",
     "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
