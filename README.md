@@ -1,6 +1,6 @@
-# birki
+# birki 💻
 
-Personal website
+My personal website
 
 ## Local Development 🔨
 
@@ -13,8 +13,18 @@ npm i
 npm start
 ```
 
-### Build
+### Build 🏗️
 
 ```shell
 npm run build
 ```
+
+## Deploying to GitHub Pages 🚀
+
+Deploying this website to GitHub Pages is very easy, simply run the command below:
+
+```shell
+npm run deploy
+```
+
+> Remember to update GitHub Pages to point to the `gh-pages` branch

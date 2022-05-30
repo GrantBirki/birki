@@ -1,7 +1,7 @@
 {
   "name": "birki.io",
   "version": "0.1.0",
-  "homepage": "https://birki.io",
+  "homepage": "https://GrantBirki.github.io/birki",
   "private": true,
   "dependencies": {
     "react": "^16.8.4",
@@ -26,5 +26,8 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "devDependencies": {
+    "gh-pages": "^4.0.0"
+  }
 }
