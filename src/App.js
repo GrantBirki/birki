@@ -85,7 +85,7 @@ class App extends Component {
           <main className="App-main">
             <div className="container">
               <h1 className="intro">{devIntro}</h1>
-              <div className="shell">$ rm -rf /</div>
+              <div className="shell">$ git push --force</div>
               <div className="tagline">
                 <Typist>{devDesc}</Typist>
               </div>
