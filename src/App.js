@@ -98,7 +98,7 @@ class App extends Component {
                     rel="noopener noreferrer"
                     href={`${icon.url}`}
                   >
-                    <i className={`fab ${icon.image}`} />
+                    <i className={icon.image} />
                   </a>
                 ))}
               </div>
