@@ -21,6 +21,12 @@ npm run build
 
 ## Deploy to GitHub Pages 🚀
 
+### Automatic Way
+
+When you merge a pull request, or push to the `main` branch, GitHub Actions will automatically build and deploy the site to GitHub Pages.
+
+### Manual Way
+
 To deploy to GitHub Pages, run the following command:
 
 ```shell
