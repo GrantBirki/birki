@@ -1,6 +1,11 @@
-body {
+html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
   font-weight: 800;
   font-family: monospace;
   -webkit-font-smoothing: antialiased;
