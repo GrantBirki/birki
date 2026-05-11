@@ -8,7 +8,8 @@ type EarthTexture = {
 
 class AsciiGlobe {
   private static readonly targetFrameMs = 1000 / 15;
-  private static readonly tiltRadians = degToRad(23.5);
+  private static readonly axialDriftRadians = degToRad(56);
+  private static readonly rollRadians = degToRad(10);
   private static readonly earth = decodeTextureData(earthMap);
 
   private columns = 0;
@@ -82,7 +83,9 @@ class AsciiGlobe {
   }
 
   private render(time: number): void {
-    const rotation = this.reducedMotion ? -1.35 : -1.35 + time * 0.32;
+    const rotation = this.reducedMotion ? -1.35 : -1.35 + time * 0.3;
+    const axialTilt = this.reducedMotion ? degToRad(-22) : Math.sin(time * 0.035 + 0.65) * AsciiGlobe.axialDriftRadians;
+    const roll = this.reducedMotion ? 0 : Math.sin(time * 0.021) * AsciiGlobe.rollRadians;
     const centerX = (this.columns - 1) / 2;
     const centerY = (this.rows - 1) / 2;
     const output: string[] = [];
@@ -101,8 +104,9 @@ class AsciiGlobe {
         }
 
         const z = Math.sqrt(1 - radiusSquared);
-        const tilted = rotateX(x, y, z, AsciiGlobe.tiltRadians);
-        const rotated = rotateY(tilted[0], tilted[1], tilted[2], rotation);
+        const tilted = rotateX(x, y, z, axialTilt);
+        const rolled = rotateZ(tilted[0], tilted[1], tilted[2], roll);
+        const rotated = rotateY(rolled[0], rolled[1], rolled[2], rotation);
         const latitude = Math.asin(clamp(rotated[1], -1, 1));
         const longitude = Math.atan2(-rotated[2], rotated[0]);
         line += glyphForCell(latitude, longitude, radiusSquared, column, row, time, AsciiGlobe.earth);
@@ -210,6 +214,12 @@ function rotateY(x: number, y: number, z: number, angle: number): [number, numbe
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
   return [x * cos + z * sin, y, -x * sin + z * cos];
+}
+
+function rotateZ(x: number, y: number, z: number, angle: number): [number, number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x * cos - y * sin, x * sin + y * cos, z];
 }
 
 function pick(characters: string, value: number): string {
