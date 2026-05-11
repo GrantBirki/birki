@@ -1,23 +1,15 @@
 import { createReadStream, existsSync, readFileSync, statSync, watch } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { contentTypeFor, resolveStaticPath } from "./static-files.mjs";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const distRoot = join(projectRoot, "dist");
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "4173", 10);
 const liveReloadClients = new Set();
-const types = new Map([
-  [".css", "text/css; charset=utf-8"],
-  [".html", "text/html; charset=utf-8"],
-  [".ico", "image/x-icon"],
-  [".js", "text/javascript; charset=utf-8"],
-  [".json", "application/json; charset=utf-8"],
-  [".map", "application/json; charset=utf-8"],
-]);
-
 let building = false;
 let pendingBuild = false;
 let debounceTimer;
@@ -43,9 +35,9 @@ function startServer() {
     }
 
     const requestedPath = url.pathname === "/" ? "/index.html" : url.pathname;
-    const filePath = normalize(join(distRoot, requestedPath));
+    const filePath = resolveStaticPath(distRoot, requestedPath);
 
-    if (!filePath.startsWith(distRoot) || !existsSync(filePath)) {
+    if (!filePath || !existsSync(filePath)) {
       response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
       response.end("Not found");
       return;
@@ -57,7 +49,7 @@ function startServer() {
       return;
     }
 
-    response.writeHead(200, { "content-type": types.get(extname(filePath)) ?? "application/octet-stream" });
+    response.writeHead(200, { "content-type": contentTypeFor(filePath) });
     createReadStream(filePath).pipe(response);
   }).listen(port, host, () => {
     console.log(`Dev server listening at http://${host}:${port}`);

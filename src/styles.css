@@ -244,6 +244,8 @@ h1 span {
 .link-grid a:focus-visible .icon-box {
   border-color: rgba(141, 144, 255, 0.72);
   color: var(--lavender-deep);
+  outline: 2px solid rgba(100, 107, 255, 0.62);
+  outline-offset: 4px;
   transform: translateY(-2px);
   box-shadow:
     0 14px 30px rgba(103, 92, 158, 0.12),

@@ -13,3 +13,4 @@ await cp(join(root, "src", "styles.css"), join(dist, "styles.css"));
 await cp(join(root, "public", "favicon.ico"), join(dist, "favicon.ico"));
 await cp(join(root, "public", "manifest.json"), join(dist, "manifest.json"));
 await cp(join(root, "CNAME"), join(dist, "CNAME"));
+await cp(join(root, "THIRD_PARTY_NOTICES.md"), join(dist, "THIRD_PARTY_NOTICES.md"));
