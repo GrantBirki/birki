@@ -1,281 +1,250 @@
-import * as THREE from "three";
-import { AsciiEffect } from "three/addons/effects/AsciiEffect.js";
+import earthMap from "./earth-map.js";
 
-type ParticleSeed = {
-  band: number;
-  phase: number;
-  u: number;
-  v: number;
+type EarthTexture = {
+  width: number;
+  height: number;
+  mask: Uint8Array;
 };
 
-type FallSeed = {
-  length: number;
-  phase: number;
-  x: number;
-  y: number;
-  z: number;
-};
+class AsciiGlobe {
+  private static readonly targetFrameMs = 1000 / 15;
+  private static readonly tiltRadians = degToRad(23.5);
+  private static readonly earth = decodeTextureData(earthMap);
 
-class OrganicAsciiStage {
-  private static readonly targetFrameMs = 1000 / 16;
-  private static readonly particleCount = 3400;
-  private static readonly strandCount = 8;
-  private static readonly strandSegments = 170;
-  private static readonly fallCount = 44;
-
-  private readonly scene = new THREE.Scene();
-  private readonly camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  private readonly renderer: THREE.WebGLRenderer;
-  private readonly effect: AsciiEffect;
-  private readonly group = new THREE.Group();
-  private readonly particleSeeds: ParticleSeed[] = [];
-  private readonly fallSeeds: FallSeed[] = [];
-  private readonly particlePositions = new Float32Array(OrganicAsciiStage.particleCount * 3);
-  private readonly particleGeometry = new THREE.BufferGeometry();
-  private readonly fallGeometry = new THREE.BufferGeometry();
-  private readonly strandGeometries: THREE.BufferGeometry[] = [];
-  private readonly startTime = performance.now();
-  private readonly resizeObserver: ResizeObserver;
-  private lastRenderTime = 0;
+  private columns = 0;
+  private rows = 0;
+  private cellWidth = 6;
+  private cellHeight = 8;
+  private radius = 340;
   private animationId = 0;
+  private lastFrame = 0;
+  private readonly resizeObserver: ResizeObserver;
 
   constructor(
-    private readonly canvas: HTMLCanvasElement,
+    private readonly element: HTMLPreElement,
     private readonly reducedMotion: boolean,
   ) {
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: false,
-      alpha: false,
-      powerPreference: "high-performance",
+    this.resizeObserver = new ResizeObserver(() => {
+      this.configureGrid();
+      this.render(performance.now() / 1000);
     });
-    this.renderer.setClearColor(0xffffff, 1);
-
-    this.effect = new AsciiEffect(this.renderer, "   ....::::xxxx001101", {
-      alpha: false,
-      block: false,
-      color: false,
-      invert: false,
-      resolution: window.innerWidth < 680 ? 0.078 : 0.09,
-      scale: 1,
-      strResolution: "high",
-    });
-    this.effect.domElement.className = "ascii-effect";
-    this.effect.domElement.setAttribute("aria-hidden", "true");
-    this.canvas.after(this.effect.domElement);
-
-    this.camera.position.set(0, 0, 5.75);
-    this.scene.add(this.group);
-    this.createParticleCloud();
-    this.createStrands();
-    this.createFallLines();
-    this.resize();
-
-    window.addEventListener("resize", () => this.resize(), { passive: true });
-    this.resizeObserver = new ResizeObserver(() => this.resize());
-    this.resizeObserver.observe(this.canvas.parentElement ?? this.canvas);
+    this.resizeObserver.observe(this.element.parentElement ?? this.element);
+    window.addEventListener("resize", () => {
+      this.configureGrid();
+      this.render(performance.now() / 1000);
+    }, { passive: true });
+    this.configureGrid();
   }
 
   start(): void {
-    this.renderFrame(0);
+    this.render(0);
 
-    if (!this.reducedMotion) {
-      const animate = () => {
-        this.animationId = window.requestAnimationFrame(animate);
-        const now = performance.now();
-
-        if (now - this.lastRenderTime >= OrganicAsciiStage.targetFrameMs) {
-          this.lastRenderTime = now;
-          this.renderFrame((now - this.startTime) / 1000);
-        }
-      };
-      animate();
-    }
-  }
-
-  private createParticleCloud(): void {
-    for (let i = 0; i < OrganicAsciiStage.particleCount; i += 1) {
-      this.particleSeeds.push({
-        band: Math.floor(Math.random() * 4),
-        phase: Math.random() * Math.PI * 2,
-        u: Math.random(),
-        v: randomRange(-1, 1),
-      });
+    if (this.reducedMotion) {
+      return;
     }
 
-    this.particleGeometry.setAttribute("position", new THREE.BufferAttribute(this.particlePositions, 3));
+    const tick = (now: number) => {
+      this.animationId = window.requestAnimationFrame(tick);
 
-    const points = new THREE.Points(
-      this.particleGeometry,
-      new THREE.PointsMaterial({
-        color: 0x141414,
-        size: 0.086,
-        transparent: true,
-        opacity: 1,
-      }),
-    );
-    points.frustumCulled = false;
-    this.group.add(points);
-  }
-
-  private createStrands(): void {
-    for (let strand = 0; strand < OrganicAsciiStage.strandCount; strand += 1) {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute(
-        "position",
-        new THREE.BufferAttribute(new Float32Array(OrganicAsciiStage.strandSegments * 3), 3),
-      );
-
-      const line = new THREE.LineSegments(
-        geometry,
-        new THREE.LineBasicMaterial({
-          color: 0x1f1f1f,
-          transparent: true,
-          opacity: 0.62,
-        }),
-      );
-      line.frustumCulled = false;
-      this.strandGeometries.push(geometry);
-      this.group.add(line);
-    }
-  }
-
-  private createFallLines(): void {
-    for (let i = 0; i < OrganicAsciiStage.fallCount; i += 1) {
-      const sideBias = Math.random() > 0.5 ? 1 : -1;
-
-      this.fallSeeds.push({
-        length: randomRange(0.6, 2.1),
-        phase: Math.random() * Math.PI * 2,
-        x: randomRange(-2.55, 2.55) + sideBias * randomRange(0, 0.28),
-        y: randomRange(-1.35, 1.45),
-        z: randomRange(-0.65, 0.35),
-      });
-    }
-
-    this.fallGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(OrganicAsciiStage.fallCount * 2 * 3), 3),
-    );
-
-    const lines = new THREE.LineSegments(
-      this.fallGeometry,
-      new THREE.LineBasicMaterial({
-        color: 0x202020,
-        transparent: true,
-        opacity: 0.34,
-      }),
-    );
-    lines.frustumCulled = false;
-    this.scene.add(lines);
-  }
-
-  private resize(): void {
-    const bounds = (this.canvas.parentElement ?? this.canvas).getBoundingClientRect();
-    const width = Math.max(320, Math.floor(bounds.width));
-    const height = Math.max(280, Math.floor(bounds.height));
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setPixelRatio(1);
-    this.effect.setSize(width, height);
-  }
-
-  private renderFrame(time: number): void {
-    this.group.rotation.x = this.reducedMotion ? -0.1 : -0.1 + Math.sin(time * 0.22) * 0.05;
-    this.group.rotation.y = this.reducedMotion ? -0.28 : -0.28 + Math.sin(time * 0.18) * 0.14;
-    this.group.rotation.z = this.reducedMotion ? 0.06 : 0.06 + Math.sin(time * 0.14) * 0.05;
-
-    this.updateParticles(time);
-    this.updateStrands(time);
-    this.updateFallLines(time);
-    this.effect.render(this.scene, this.camera);
-  }
-
-  private updateParticles(time: number): void {
-    const position = this.particleGeometry.getAttribute("position") as THREE.BufferAttribute;
-
-    this.particleSeeds.forEach((seed, index) => {
-      const point = organicPoint(seed.u, seed.v, seed.band, seed.phase, time);
-      position.setXYZ(index, point.x, point.y, point.z);
-    });
-
-    position.needsUpdate = true;
-  }
-
-  private updateStrands(time: number): void {
-    this.strandGeometries.forEach((geometry, strand) => {
-      const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-      const band = strand % 4;
-      const lane = (strand - (OrganicAsciiStage.strandCount - 1) / 2) / OrganicAsciiStage.strandCount;
-      let cursor = 0;
-
-      for (let i = 0; i < OrganicAsciiStage.strandSegments; i += 2) {
-        const uA = i / OrganicAsciiStage.strandSegments;
-        const uB = (i + 1) / OrganicAsciiStage.strandSegments;
-        const phase = strand * 0.72;
-        const vA = lane + Math.sin(uA * Math.PI * 6 + time * 0.42 + phase) * 0.08;
-        const vB = lane + Math.sin(uB * Math.PI * 6 + time * 0.42 + phase) * 0.08;
-        const a = organicPoint(uA, vA, band, phase, time);
-        const b = organicPoint(uB, vB, band, phase, time);
-        position.setXYZ(cursor++, a.x, a.y, a.z);
-        position.setXYZ(cursor++, b.x, b.y, b.z);
+      if (now - this.lastFrame < AsciiGlobe.targetFrameMs) {
+        return;
       }
 
-      position.needsUpdate = true;
-    });
+      this.lastFrame = now;
+      this.render(now / 1000);
+    };
+
+    this.animationId = window.requestAnimationFrame(tick);
   }
 
-  private updateFallLines(time: number): void {
-    const position = this.fallGeometry.getAttribute("position") as THREE.BufferAttribute;
+  stop(): void {
+    window.cancelAnimationFrame(this.animationId);
+    this.resizeObserver.disconnect();
+  }
 
-    this.fallSeeds.forEach((seed, index) => {
-      const shimmer = Math.sin(time * 0.42 + seed.phase) * 0.055;
-      const drift = Math.sin(time * 0.18 + seed.phase * 0.7) * 0.12;
-      const x = seed.x + shimmer;
-      const y = seed.y + drift;
-      const top = y + seed.length * 0.5;
-      const bottom = y - seed.length * 0.5;
-      const cursor = index * 2;
+  private configureGrid(): void {
+    const bounds = (this.element.parentElement ?? this.element).getBoundingClientRect();
+    const mobile = bounds.width < 680;
+    const fontSize = clamp(
+      Math.min(bounds.width, bounds.height) / (mobile ? 84 : 100),
+      mobile ? 4.55 : 7,
+      mobile ? 5.9 : 9.25,
+    );
+    const nextColumns = Math.ceil(bounds.width / (fontSize * 0.61)) + 2;
+    const nextRows = Math.ceil(bounds.height / (fontSize * 0.82)) + 2;
 
-      position.setXYZ(cursor, x, top, seed.z);
-      position.setXYZ(cursor + 1, x, bottom, seed.z);
-    });
+    this.columns = nextColumns;
+    this.rows = nextRows;
+    this.cellWidth = fontSize * 0.61;
+    this.cellHeight = fontSize * 0.82;
+    this.radius = Math.max(bounds.width, bounds.height) * (mobile ? 0.36 : 0.47);
+    this.element.style.setProperty("--ascii-font-size", `${fontSize.toFixed(2)}px`);
+  }
 
-    position.needsUpdate = true;
+  private render(time: number): void {
+    const rotation = this.reducedMotion ? -1.35 : -1.35 + time * 0.32;
+    const centerX = (this.columns - 1) / 2;
+    const centerY = (this.rows - 1) / 2;
+    const output: string[] = [];
+
+    for (let row = 0; row < this.rows; row++) {
+      let line = "";
+
+      for (let column = 0; column < this.columns; column++) {
+        const x = ((column - centerX) * this.cellWidth) / this.radius;
+        const y = ((centerY - row) * this.cellHeight) / this.radius;
+        const radiusSquared = x * x + y * y;
+
+        if (radiusSquared > 1) {
+          line += " ";
+          continue;
+        }
+
+        const z = Math.sqrt(1 - radiusSquared);
+        const tilted = rotateX(x, y, z, AsciiGlobe.tiltRadians);
+        const rotated = rotateY(tilted[0], tilted[1], tilted[2], rotation);
+        const latitude = Math.asin(clamp(rotated[1], -1, 1));
+        const longitude = Math.atan2(-rotated[2], rotated[0]);
+        line += glyphForCell(latitude, longitude, radiusSquared, column, row, time, AsciiGlobe.earth);
+      }
+
+      output.push(line);
+    }
+
+    this.element.textContent = output.join("\n");
   }
 }
 
-function organicPoint(u: number, v: number, band: number, phase: number, time: number): THREE.Vector3 {
-  const theta = u * Math.PI * 2;
-  const drift = time * 0.24;
-  const petal =
-    1 +
-    Math.sin(theta * 3 + drift + phase) * 0.18 +
-    Math.sin(theta * 5 - drift * 0.7 + band) * 0.1;
-  const width = v * (0.36 + Math.sin(theta * 2 + phase + drift) * 0.09);
-  const curl = Math.sin(theta * 1.5 + phase + drift) * 0.34;
-  const bandOffset = (band - 1.5) * 0.08;
+function glyphForCell(
+  latitude: number,
+  longitude: number,
+  radiusSquared: number,
+  column: number,
+  row: number,
+  time: number,
+  texture: EarthTexture,
+): string {
+  const land = sampleEarth(texture, latitude, longitude);
+  const noise = pseudoNoise(latitude * 46 + time * 0.12, longitude * 29);
+  const limb = radiusSquared > 0.9;
+  const coast = land > 0.24 && land < 0.62;
+  const latitudeLine = isNearInterval(radToDeg(latitude), 15, 0.42) && radiusSquared < 0.94;
+  const longitudeLine = isNearInterval(radToDeg(longitude), 30, 0.46) && radiusSquared < 0.94;
+  const oceanTrace = pseudoNoise(column * 1.7, row * 2.1 + Math.floor(time * 2)) > 0.91;
 
-  const x =
-    Math.cos(theta) * petal * 1.82 +
-    Math.cos(theta + Math.PI / 2) * width * 1.36 +
-    Math.sin(theta * 2.1 + drift) * 0.18;
-  const y =
-    Math.sin(theta) * petal * 1.04 +
-    Math.sin(theta + Math.PI / 2) * width * 0.9 +
-    Math.sin(theta * 2.6 - drift + phase) * 0.16;
-  const z = width * 0.78 + curl + bandOffset;
+  if (land > 0.62) {
+    return pick(land > 0.84 ? "111100110111101" : "001101101001", noise);
+  }
 
-  return new THREE.Vector3(x, y, z);
+  if (coast) {
+    return pick("..::0011", noise);
+  }
+
+  if (limb) {
+    return pick("..:001", noise);
+  }
+
+  if (latitudeLine || longitudeLine) {
+    return noise > 0.54 ? "." : " ";
+  }
+
+  if (oceanTrace) {
+    return pick(" ..001", noise);
+  }
+
+  return " ";
 }
 
-function randomRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+function decodeTextureData(data: string): EarthTexture {
+  const raw = atob(data);
+  const bin = new Uint8Array(raw.length);
+
+  for (let i = 0; i < raw.length; i += 1) {
+    bin[i] = raw.charCodeAt(i);
+  }
+
+  const width = (bin[0] << 8) | bin[1];
+  const height = (bin[2] << 8) | bin[3];
+  const mask = new Uint8Array(width * height);
+
+  for (let i = 0; i < mask.length; i += 1) {
+    const value = i & 1 ? bin[4 + (i >> 1)] & 0x0f : bin[4 + (i >> 1)] >> 4;
+    mask[i] = value * 17;
+  }
+
+  return { width, height, mask };
 }
 
-const canvas = document.querySelector<HTMLCanvasElement>("#ascii-canvas");
+function sampleEarth(texture: EarthTexture, latitude: number, longitude: number): number {
+  const normalizedLongitude = ((longitude / Math.PI) * 0.5 + 0.5) * texture.width;
+  const normalizedLatitude = (0.5 - latitude / Math.PI) * texture.height;
+  let x0 = Math.floor(normalizedLongitude);
+  let y0 = Math.floor(normalizedLatitude);
+  const xFraction = normalizedLongitude - x0;
+  const yFraction = normalizedLatitude - y0;
+  let x1 = x0 + 1;
+  let y1 = y0 + 1;
+
+  x0 = wrap(x0, texture.width);
+  x1 = wrap(x1, texture.width);
+  y0 = clamp(Math.trunc(y0), 0, texture.height - 1);
+  y1 = clamp(Math.trunc(y1), 0, texture.height - 1);
+
+  const topLeft = texture.mask[y0 * texture.width + x0] ?? 0;
+  const topRight = texture.mask[y0 * texture.width + x1] ?? 0;
+  const bottomLeft = texture.mask[y1 * texture.width + x0] ?? 0;
+  const bottomRight = texture.mask[y1 * texture.width + x1] ?? 0;
+  const top = topLeft + (topRight - topLeft) * xFraction;
+  const bottom = bottomLeft + (bottomRight - bottomLeft) * xFraction;
+
+  return (top + (bottom - top) * yFraction) / 255;
+}
+
+function rotateX(x: number, y: number, z: number, angle: number): [number, number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x, y * cos - z * sin, y * sin + z * cos];
+}
+
+function rotateY(x: number, y: number, z: number, angle: number): [number, number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x * cos + z * sin, y, -x * sin + z * cos];
+}
+
+function pick(characters: string, value: number): string {
+  return characters[Math.min(characters.length - 1, Math.floor(value * characters.length))] ?? characters[0] ?? " ";
+}
+
+function isNearInterval(value: number, interval: number, threshold: number): boolean {
+  const remainder = Math.abs((((value + interval / 2) % interval) + interval) % interval - interval / 2);
+  return remainder < threshold;
+}
+
+function pseudoNoise(a: number, b: number): number {
+  const value = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function wrap(value: number, max: number): number {
+  return ((value % max) + max) % max;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function degToRad(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
+function radToDeg(radians: number): number {
+  return radians * (180 / Math.PI);
+}
+
+const globe = document.querySelector<HTMLPreElement>("#ascii-globe-text");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-if (canvas) {
-  new OrganicAsciiStage(canvas, prefersReducedMotion).start();
+if (globe) {
+  new AsciiGlobe(globe, prefersReducedMotion).start();
 }
