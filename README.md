@@ -9,8 +9,9 @@ Instructions for building and testing locally
 ### Run
 
 ```shell
-npm i
-npm start
+npm ci
+npm run build
+npm run dev
 ```
 
 ### Build 🏗️
@@ -19,22 +20,16 @@ npm start
 npm run build
 ```
 
-## Deploy to GitHub Pages 🚀
-
-### Automatic Way
-
-When you merge a pull request, or push to the `main` branch, GitHub Actions will automatically build and deploy the site to GitHub Pages.
-
-### Manual Way
-
-To deploy to GitHub Pages, run the following command:
+### Typecheck
 
 ```shell
-npm run deploy
+npm run typecheck
 ```
 
-> Don't forget to edit your `CNAME` file, the `package.json` file, and to update your Pages branch to `gh-pages` in your GitHub settings
+## Deploy to GitHub Pages 🚀
+
+When you merge a pull request, or push to the `main` branch, GitHub Actions will build `dist/` and deploy it with GitHub Pages Actions.
 
 ## Icons 🎨
 
-Icons come from Font Awesome. Specifically, they come from [this page](https://www.w3schools.com/icons/fontawesome5_icons_objects.asp)
+Icons are local inline SVGs.
