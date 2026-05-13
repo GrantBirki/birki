@@ -32,7 +32,7 @@ export type GlobeFrame = {
 const maxMaskCells = 5_000_000;
 
 export class AsciiGlobe {
-  private static readonly targetFrameMs = 1000 / 15;
+  private static readonly targetFrameMs = 1000 / 30;
 
   private animationId = 0;
   private grid = configureGlobeGrid({ height: 720, width: 1280 });
@@ -72,11 +72,13 @@ export class AsciiGlobe {
     const tick = (now: number) => {
       this.animationId = window.requestAnimationFrame(tick);
 
-      if (now - this.lastFrame < AsciiGlobe.targetFrameMs) {
+      const elapsed = now - this.lastFrame;
+
+      if (elapsed < AsciiGlobe.targetFrameMs) {
         return;
       }
 
-      this.lastFrame = now;
+      this.lastFrame = now - (elapsed % AsciiGlobe.targetFrameMs);
       this.render(now / 1000);
     };
 
@@ -132,7 +134,6 @@ export function renderAsciiGlobe(options: {
 }): GlobeFrame {
   const { grid, reducedMotion, texture, time } = options;
   const orientation = calculateOrientation(time, reducedMotion);
-  const glyphTime = reducedMotion ? 0 : time;
   const centerX = (grid.columns - 1) / 2;
   const centerY = (grid.rows - 1) / 2;
   const output: string[] = [];
@@ -156,7 +157,7 @@ export function renderAsciiGlobe(options: {
       const rotated = rotateY(rolled[0], rolled[1], rolled[2], orientation.rotation);
       const latitude = Math.asin(clamp(rotated[1], -1, 1));
       const longitude = Math.atan2(-rotated[2], rotated[0]);
-      line += glyphForCell(latitude, longitude, radiusSquared, column, row, glyphTime, texture);
+      line += glyphForCell(latitude, longitude, radiusSquared, column, row, texture);
     }
 
     output.push(line);
@@ -188,37 +189,25 @@ export function glyphForCell(
   latitude: number,
   longitude: number,
   radiusSquared: number,
-  column: number,
-  row: number,
-  time: number,
+  _column: number,
+  _row: number,
   texture: EarthTexture,
 ): string {
   const land = sampleEarth(texture, latitude, longitude);
-  const noise = pseudoNoise(latitude * 46 + time * 0.12, longitude * 29);
   const limb = radiusSquared > 0.9;
-  const coast = land > 0.24 && land < 0.62;
-  const latitudeLine = isNearInterval(radToDeg(latitude), 15, 0.42) && radiusSquared < 0.94;
-  const longitudeLine = isNearInterval(radToDeg(longitude), 30, 0.46) && radiusSquared < 0.94;
-  const oceanTrace = pseudoNoise(column * 1.7, row * 2.1 + Math.floor(time * 2)) > 0.91;
+  const latitudeLine = isNearInterval(radToDeg(latitude), 15, 0.24) && radiusSquared < 0.9;
+  const longitudeLine = isNearInterval(radToDeg(longitude), 30, 0.24) && radiusSquared < 0.9;
 
-  if (land > 0.62) {
-    return pick(land > 0.84 ? "111100110111101" : "001101101001", noise);
-  }
-
-  if (coast) {
-    return pick("..::0011", noise);
+  if (land >= 0.56) {
+    return land >= 0.78 ? "1" : "0";
   }
 
   if (limb) {
-    return pick("..:001", noise);
+    return ".";
   }
 
-  if (latitudeLine || longitudeLine) {
-    return noise > 0.54 ? "." : " ";
-  }
-
-  if (oceanTrace) {
-    return pick(" ..001", noise);
+  if ((latitudeLine || longitudeLine) && land < 0.08) {
+    return ".";
   }
 
   return " ";
@@ -320,18 +309,9 @@ function rotateZ(x: number, y: number, z: number, angle: number): [number, numbe
   return [x * cos - y * sin, x * sin + y * cos, z];
 }
 
-function pick(characters: string, value: number): string {
-  return characters[Math.min(characters.length - 1, Math.floor(value * characters.length))] ?? characters[0] ?? " ";
-}
-
 function isNearInterval(value: number, interval: number, threshold: number): boolean {
   const remainder = Math.abs((((value + interval / 2) % interval) + interval) % interval - interval / 2);
   return remainder < threshold;
-}
-
-function pseudoNoise(a: number, b: number): number {
-  const value = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
-  return value - Math.floor(value);
 }
 
 function wrap(value: number, max: number): number {

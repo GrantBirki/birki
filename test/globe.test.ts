@@ -6,6 +6,7 @@ import {
   configureGlobeGrid,
   decodeTextureData,
   degToRad,
+  glyphForCell,
   renderAsciiGlobe,
   sampleEarth,
 } from "../src/globe.ts";
@@ -47,6 +48,21 @@ test("renders fixed-width ASCII with visible content", () => {
   assert.equal(lines.length, grid.rows);
   assert.deepEqual([...lengths], [grid.columns]);
   assert.match(frame.text, /[01:.]/);
+});
+
+test("glyph selection is stable for fixed earth coordinates", () => {
+  const first = glyphForCell(0.72, -1.31, 0.55, 80, 40, texture);
+  const second = glyphForCell(0.72, -1.31, 0.55, 80, 40, texture);
+
+  assert.equal(first, second);
+});
+
+test("low-confidence coast samples do not dither into fuzzy artifacts", () => {
+  const edgeTexture = { height: 1, mask: Uint8Array.of(140), width: 1 };
+  const landTexture = { height: 1, mask: Uint8Array.of(210), width: 1 };
+
+  assert.equal(glyphForCell(0, 0, 0.5, 0, 0, edgeTexture), " ");
+  assert.match(glyphForCell(0, 0, 0.5, 0, 0, landTexture), /^[01]$/);
 });
 
 test("starts with a northern hemisphere bias and later drifts through southern views", () => {

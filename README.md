@@ -10,25 +10,30 @@ Instructions for building and testing locally
 
 ```shell
 npm ci
-npm run build
 npm run dev
+```
+
+### Lint
+
+```shell
+script/lint
+```
+
+### Test
+
+```shell
+script/test
 ```
 
 ### Build 🏗️
 
 ```shell
-npm run build
-```
-
-### Typecheck
-
-```shell
-npm run typecheck
+script/build
 ```
 
 ## Deploy to GitHub Pages 🚀
 
-When you merge a pull request, or push to the `main` branch, GitHub Actions will build `dist/` and deploy it with GitHub Pages Actions.
+Pull requests can be deployed with a `.deploy` comment. The merge deployment path is protected by the branch-deploy merge gate and deploys `dist/` with GitHub Pages Actions when changes land on `main`.
 
 ## Icons 🎨
 

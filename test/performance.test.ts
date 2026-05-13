@@ -6,7 +6,7 @@ import { configureGlobeGrid, decodeTextureData, renderAsciiGlobe } from "../src/
 
 const texture = decodeTextureData(earthMap);
 
-test("desktop globe render stays within the 15 FPS frame budget", (t) => {
+test("desktop globe render stays within the 30 FPS frame budget", (t) => {
   const grid = configureGlobeGrid({ height: 1248, width: 1674 });
   const samples: number[] = [];
 
@@ -24,8 +24,8 @@ test("desktop globe render stays within the 15 FPS frame budget", (t) => {
   const worst = Math.max(...samples);
 
   t.diagnostic(`desktop ASCII render mean=${mean.toFixed(2)}ms worst=${worst.toFixed(2)}ms`);
-  assert.ok(mean < 66, `mean render ${mean.toFixed(2)}ms should stay under 66ms`);
-  assert.ok(worst < 120, `worst render ${worst.toFixed(2)}ms should leave room for browser work`);
+  assert.ok(mean < 33, `mean render ${mean.toFixed(2)}ms should stay under 33ms`);
+  assert.ok(worst < 66, `worst render ${worst.toFixed(2)}ms should leave room for browser work`);
 });
 
 test("mobile globe render has ample headroom", (t) => {

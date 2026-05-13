@@ -46,8 +46,8 @@ test("no external CDN or remote asset is loaded by the page shell", () => {
 
 test("keyboard focus has a visible outline treatment", () => {
   assert.match(stylesCss, /\.link-grid a:focus-visible \.icon-box/);
-  assert.match(stylesCss, /outline: 2px solid rgba\(100, 107, 255, 0\.62\);/);
-  assert.match(stylesCss, /outline-offset: 4px;/);
+  assert.match(stylesCss, /outline: 1\.5px solid rgba\(100, 107, 255, 0\.58\);/);
+  assert.match(stylesCss, /outline-offset: 2px;/);
 });
 
 test("build output includes required third-party notices", () => {
