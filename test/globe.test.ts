@@ -33,7 +33,7 @@ test("configures a centered globe that fits inside a desktop viewport", () => {
   const bounds = { height: 1248, width: 1674 };
   const grid = configureGlobeGrid(bounds);
 
-  assert.equal(grid.fontSize, 9.25);
+  assert.equal(grid.fontSize, 10.5);
   assert.ok(grid.radius * 2 < bounds.height, "globe diameter should fit in viewport height");
   assert.ok(grid.columns * grid.cellWidth > bounds.width, "ASCII field should cover viewport width");
   assert.ok(grid.rows * grid.cellHeight > bounds.height, "ASCII field should cover viewport height");
@@ -57,12 +57,18 @@ test("glyph selection is stable for fixed earth coordinates", () => {
   assert.equal(first, second);
 });
 
-test("low-confidence coast samples do not dither into fuzzy artifacts", () => {
+test("low-confidence coast samples render fine detail without binary overfill", () => {
   const edgeTexture = { height: 1, mask: Uint8Array.of(140), width: 1 };
   const landTexture = { height: 1, mask: Uint8Array.of(210), width: 1 };
 
-  assert.equal(glyphForCell(0, 0, 0.5, 0, 0, edgeTexture), " ");
-  assert.match(glyphForCell(0, 0, 0.5, 0, 0, landTexture), /^[01]$/);
+  assert.match(glyphForCell(0, 0, 0.5, 0, 0, edgeTexture), /^[.: ]$/);
+  assert.match(glyphForCell(0, 0, 0.5, 0, 0, landTexture), /^[01+*x=%]$/);
+});
+
+test("open ocean cells remain visually quiet", () => {
+  const oceanTexture = { height: 1, mask: Uint8Array.of(0), width: 1 };
+
+  assert.equal(glyphForCell(0, 0, 0.5, 12, 8, oceanTexture), " ");
 });
 
 test("starts with a northern hemisphere bias and later drifts through southern views", () => {

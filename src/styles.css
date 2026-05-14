@@ -5,9 +5,9 @@
   --muted: #575d6d;
   --quiet: #8c91a4;
   --line: #e6e3ea;
-  --grid-minor: rgba(105, 114, 148, 0.052);
-  --grid-major: rgba(141, 144, 255, 0.105);
-  --grid-dot: rgba(141, 144, 255, 0.16);
+  --grid-minor: rgba(105, 114, 148, 0.03);
+  --grid-major: rgba(141, 144, 255, 0.058);
+  --grid-dot: rgba(141, 144, 255, 0.105);
   --lavender: #8d90ff;
   --lavender-deep: #646bff;
   --shadow: rgba(103, 92, 158, 0.1);
@@ -28,8 +28,8 @@ body {
   min-height: 100svh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 45%, rgba(141, 144, 255, 0.13), transparent 31rem),
-    radial-gradient(circle at 27% 74%, rgba(239, 229, 239, 0.65), transparent 27rem),
+    radial-gradient(circle at 50% 45%, rgba(141, 144, 255, 0.095), transparent 31rem),
+    radial-gradient(circle at 27% 74%, rgba(239, 229, 239, 0.48), transparent 27rem),
     linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
   color: var(--ink);
   font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
@@ -61,7 +61,7 @@ a {
     -1px -1px,
     -1px -1px,
     8px 8px;
-  opacity: 0.9;
+  opacity: 0.76;
   pointer-events: none;
 }
 
@@ -83,8 +83,8 @@ a {
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 49%, rgba(255, 255, 255, 0.64), transparent 18rem),
-    rgba(255, 255, 255, 0.44);
+    radial-gradient(circle at 50% 49%, rgba(255, 255, 255, 0.46), transparent 16rem),
+    rgba(255, 255, 255, 0.28);
 }
 
 .hero-surface::before,
@@ -99,8 +99,8 @@ a {
   background:
     linear-gradient(rgba(105, 114, 148, 0.038) 1px, transparent 1px),
     linear-gradient(90deg, rgba(105, 114, 148, 0.038) 1px, transparent 1px),
-    linear-gradient(rgba(141, 144, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(141, 144, 255, 0.07) 1px, transparent 1px);
+    linear-gradient(rgba(141, 144, 255, 0.044) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(141, 144, 255, 0.044) 1px, transparent 1px);
   background-size:
     18px 18px,
     18px 18px,
@@ -111,7 +111,7 @@ a {
     -1px -1px,
     -1px -1px,
     -1px -1px;
-  opacity: 0.72;
+  opacity: 0.46;
 }
 
 .hero-surface::after {
@@ -119,7 +119,7 @@ a {
   background:
     linear-gradient(90deg, transparent 49.98%, rgba(141, 144, 255, 0.09) 50%, transparent 50.02%),
     linear-gradient(180deg, transparent 49.98%, rgba(141, 144, 255, 0.078) 50%, transparent 50.02%);
-  opacity: 0.58;
+  opacity: 0.32;
 }
 
 .ascii-globe {
@@ -128,6 +128,25 @@ a {
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
+}
+
+.ascii-globe::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  width: min(94vmin, 62rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.24) 0 31%, rgba(141, 144, 255, 0.028) 43%, rgba(141, 144, 255, 0.063) 63%, rgba(141, 144, 255, 0.031) 76%, transparent 84%),
+    radial-gradient(circle, rgba(97, 103, 255, 0.035), transparent 68%);
+  box-shadow:
+    0 0 6rem rgba(141, 144, 255, 0.055),
+    inset 0 0 4.2rem rgba(141, 144, 255, 0.04);
+  opacity: 0.9;
+  transform: translate(-50%, -50%);
 }
 
 .ascii-globe-text,
@@ -143,31 +162,31 @@ a {
   margin: 0;
   overflow: hidden;
   background: transparent;
-  color: var(--lavender);
-  font: 760 var(--ascii-font-size) / 0.82 ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  letter-spacing: 0.02em;
+  color: #898dff;
+  font: 720 var(--ascii-font-size) / 0.82 ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.015em;
   pointer-events: none;
   text-align: left;
   text-shadow: 0 0 24px rgba(141, 144, 255, 0.18);
   transform: translate(-50%, -50%);
   user-select: none;
   white-space: pre;
-  opacity: 0.66;
+  opacity: 0.72;
 }
 
 .lavender-wash {
   inset: 0;
   z-index: 2;
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.94) 0 9.5rem, rgba(255, 255, 255, 0.58) 16rem, transparent 29.5rem),
-    radial-gradient(circle at 50% 50%, rgba(141, 144, 255, 0.14), transparent 33rem);
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.88) 0 6.6rem, rgba(255, 255, 255, 0.5) 11rem, rgba(255, 255, 255, 0.11) 18.6rem, transparent 27rem),
+    radial-gradient(circle at 50% 50%, rgba(141, 144, 255, 0.05), transparent 33rem);
   pointer-events: none;
 }
 
 .hero-copy {
   position: relative;
   z-index: 4;
-  width: min(31rem, calc(100vw - 3rem));
+  width: min(29rem, calc(100vw - 3rem));
   display: grid;
   justify-items: center;
   text-align: center;
@@ -177,8 +196,8 @@ a {
 h1 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(2.45rem, 3.75vw, 4.65rem);
-  font-weight: 700;
+  font-size: clamp(2.2rem, 3.35vw, 4.18rem);
+  font-weight: 680;
   line-height: 0.95;
   letter-spacing: 0;
 }
@@ -191,26 +210,26 @@ h1 span {
 .tagline {
   margin: 0.88rem 0 0;
   color: var(--lavender-deep);
-  font-size: clamp(0.62rem, 0.72vw, 0.78rem);
-  font-weight: 800;
+  font-size: clamp(0.58rem, 0.68vw, 0.72rem);
+  font-weight: 760;
   line-height: 1.5;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.025em;
   text-transform: lowercase;
 }
 
 .lede {
-  width: min(26rem, 100%);
+  width: min(24.25rem, 100%);
   margin: 1.25rem 0 0;
-  color: var(--ink);
-  font-size: clamp(0.76rem, 0.82vw, 0.9rem);
-  font-weight: 560;
-  line-height: 1.66;
+  color: #292e3d;
+  font-size: clamp(0.72rem, 0.78vw, 0.84rem);
+  font-weight: 460;
+  line-height: 1.7;
 }
 
 .lede::after {
   content: "";
   display: block;
-  width: 3rem;
+  width: 2.55rem;
   height: 1px;
   margin: 1.25rem auto 0;
   background: var(--lavender);
@@ -219,35 +238,35 @@ h1 span {
 
 .link-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(3.6rem, 1fr));
-  gap: clamp(0.72rem, 1.6vw, 1.45rem);
-  width: min(27rem, 100%);
-  margin-top: 1.42rem;
+  grid-template-columns: repeat(5, minmax(3.25rem, 1fr));
+  gap: clamp(0.58rem, 1.25vw, 1.18rem);
+  width: min(24.5rem, 100%);
+  margin-top: 1.32rem;
 }
 
 .link-grid a {
   display: grid;
   justify-items: center;
   gap: 0.62rem;
-  color: #252b76;
-  font-size: 0.6rem;
-  font-weight: 850;
-  letter-spacing: 0.04em;
+  color: #353a75;
+  font-size: 0.54rem;
+  font-weight: 760;
+  letter-spacing: 0.035em;
   text-decoration: none;
   text-transform: uppercase;
 }
 
 .icon-box {
-  width: 2.38rem;
+  width: 2.18rem;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(141, 144, 255, 0.36);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.66);
-  color: var(--lavender);
+  border: 1px solid rgba(141, 144, 255, 0.27);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.52);
+  color: rgba(100, 107, 255, 0.82);
   box-shadow:
-    0 10px 24px rgba(103, 92, 158, 0.052),
+    0 8px 18px rgba(103, 92, 158, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition:
     border-color 170ms ease,
@@ -265,10 +284,10 @@ h1 span {
 .link-grid a:hover .icon-box {
   border-color: rgba(141, 144, 255, 0.72);
   color: var(--lavender-deep);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow:
-    0 10px 22px rgba(103, 92, 158, 0.13),
-    0 0 0 1px rgba(141, 144, 255, 0.24),
+    0 8px 18px rgba(103, 92, 158, 0.095),
+    0 0 0 1px rgba(141, 144, 255, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
@@ -277,7 +296,7 @@ h1 span {
   color: var(--lavender-deep);
   outline: 1.5px solid rgba(100, 107, 255, 0.58);
   outline-offset: 2px;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow:
     0 10px 22px rgba(103, 92, 158, 0.13),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
@@ -304,8 +323,8 @@ h1 span {
 
   .lavender-wash {
     background:
-      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.88) 0 5.15rem, rgba(255, 255, 255, 0.44) 8.8rem, transparent 17rem),
-      radial-gradient(circle at 50% 50%, rgba(141, 144, 255, 0.13), transparent 22rem);
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.86) 0 4.85rem, rgba(255, 255, 255, 0.46) 8.2rem, rgba(255, 255, 255, 0.1) 14.8rem, transparent 20rem),
+      radial-gradient(circle at 50% 50%, rgba(141, 144, 255, 0.055), transparent 22rem);
   }
 
   h1 {

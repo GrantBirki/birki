@@ -24,8 +24,8 @@ test("desktop globe render stays within the 30 FPS frame budget", (t) => {
   const worst = Math.max(...samples);
 
   t.diagnostic(`desktop ASCII render mean=${mean.toFixed(2)}ms worst=${worst.toFixed(2)}ms`);
-  assert.ok(mean < 33, `mean render ${mean.toFixed(2)}ms should stay under 33ms`);
-  assert.ok(worst < 66, `worst render ${worst.toFixed(2)}ms should leave room for browser work`);
+  assert.ok(mean < 16, `mean render ${mean.toFixed(2)}ms should stay under 16ms`);
+  assert.ok(worst < 33, `worst render ${worst.toFixed(2)}ms should leave room for browser work`);
 });
 
 test("mobile globe render has ample headroom", (t) => {
@@ -42,5 +42,6 @@ test("mobile globe render has ample headroom", (t) => {
   const worst = Math.max(...samples);
 
   t.diagnostic(`mobile ASCII render mean=${mean.toFixed(2)}ms worst=${worst.toFixed(2)}ms`);
-  assert.ok(mean < 24, `mean mobile render ${mean.toFixed(2)}ms should stay under 24ms`);
+  assert.ok(mean < 10, `mean mobile render ${mean.toFixed(2)}ms should stay under 10ms`);
+  assert.ok(worst < 24, `worst mobile render ${worst.toFixed(2)}ms should leave room for browser work`);
 });

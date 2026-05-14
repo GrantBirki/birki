@@ -32,7 +32,7 @@ export type GlobeFrame = {
 const maxMaskCells = 5_000_000;
 
 export class AsciiGlobe {
-  private static readonly targetFrameMs = 1000 / 30;
+  private static readonly targetFrameMs = 1000 / 24;
 
   private animationId = 0;
   private grid = configureGlobeGrid({ height: 720, width: 1280 });
@@ -109,9 +109,9 @@ export class AsciiGlobe {
 export function configureGlobeGrid(bounds: GlobeBounds): GlobeGrid {
   const mobile = bounds.width < 680;
   const fontSize = clamp(
-    Math.min(bounds.width, bounds.height) / (mobile ? 84 : 100),
-    mobile ? 4.55 : 7,
-    mobile ? 5.9 : 9.25,
+    Math.min(bounds.width, bounds.height) / (mobile ? 78 : 92),
+    mobile ? 4.8 : 7.4,
+    mobile ? 6.25 : 10.5,
   );
   const cellWidth = fontSize * 0.61;
   const cellHeight = fontSize * 0.82;
@@ -137,6 +137,12 @@ export function renderAsciiGlobe(options: {
   const centerX = (grid.columns - 1) / 2;
   const centerY = (grid.rows - 1) / 2;
   const output: string[] = [];
+  const tiltCos = Math.cos(orientation.axialTilt);
+  const tiltSin = Math.sin(orientation.axialTilt);
+  const rollCos = Math.cos(orientation.roll);
+  const rollSin = Math.sin(orientation.roll);
+  const rotationCos = Math.cos(orientation.rotation);
+  const rotationSin = Math.sin(orientation.rotation);
 
   for (let row = 0; row < grid.rows; row += 1) {
     let line = "";
@@ -152,11 +158,14 @@ export function renderAsciiGlobe(options: {
       }
 
       const z = Math.sqrt(1 - radiusSquared);
-      const tilted = rotateX(x, y, z, orientation.axialTilt);
-      const rolled = rotateZ(tilted[0], tilted[1], tilted[2], orientation.roll);
-      const rotated = rotateY(rolled[0], rolled[1], rolled[2], orientation.rotation);
-      const latitude = Math.asin(clamp(rotated[1], -1, 1));
-      const longitude = Math.atan2(-rotated[2], rotated[0]);
+      const tiltedY = y * tiltCos - z * tiltSin;
+      const tiltedZ = y * tiltSin + z * tiltCos;
+      const rolledX = x * rollCos - tiltedY * rollSin;
+      const rolledY = x * rollSin + tiltedY * rollCos;
+      const rotatedX = rolledX * rotationCos + tiltedZ * rotationSin;
+      const rotatedZ = -rolledX * rotationSin + tiltedZ * rotationCos;
+      const latitude = Math.asin(rolledY < -1 ? -1 : rolledY > 1 ? 1 : rolledY);
+      const longitude = Math.atan2(-rotatedZ, rotatedX);
       line += glyphForCell(latitude, longitude, radiusSquared, column, row, texture);
     }
 
@@ -189,25 +198,62 @@ export function glyphForCell(
   latitude: number,
   longitude: number,
   radiusSquared: number,
-  _column: number,
-  _row: number,
+  column: number,
+  row: number,
   texture: EarthTexture,
 ): string {
   const land = sampleEarth(texture, latitude, longitude);
   const limb = radiusSquared > 0.9;
-  const latitudeLine = isNearInterval(radToDeg(latitude), 15, 0.24) && radiusSquared < 0.9;
-  const longitudeLine = isNearInterval(radToDeg(longitude), 30, 0.24) && radiusSquared < 0.9;
 
-  if (land >= 0.56) {
-    return land >= 0.78 ? "1" : "0";
+  if (land >= 0.68) {
+    const geographicHash = hashCoordinate(
+      Math.round(latitude * 115),
+      Math.round(longitude * 115),
+      0,
+    );
+    return "10+*x=%"[geographicHash * 7 | 0] ?? "%";
+  }
+
+  if (land >= 0.48) {
+    const geographicHash = hashCoordinate(
+      Math.round(latitude * 115),
+      Math.round(longitude * 115),
+      0,
+    );
+
+    if (geographicHash < 0.14) {
+      return ".";
+    }
+
+    return "10+x*="[geographicHash * 6 | 0] ?? "=";
+  }
+
+  if (land >= 0.28) {
+    const geographicHash = hashCoordinate(
+      Math.round(latitude * 115),
+      Math.round(longitude * 115),
+      0,
+    );
+
+    if (geographicHash > 0.94) {
+      return "10+x"[geographicHash * 4 | 0] ?? "x";
+    }
+
+    return geographicHash < land * 0.9 ? ".:+"[geographicHash * 3 | 0] ?? "+" : " ";
+  }
+
+  if (land >= 0.12) {
+    const geographicHash = hashCoordinate(
+      Math.round(latitude * 115),
+      Math.round(longitude * 115),
+      0,
+    );
+    return geographicHash < land * 0.65 ? "." : " ";
   }
 
   if (limb) {
-    return ".";
-  }
-
-  if ((latitudeLine || longitudeLine) && land < 0.08) {
-    return ".";
+    const screenHash = hashCoordinate(column, row, 37);
+    return screenHash > 0.28 ? "." : " ";
   }
 
   return " ";
@@ -249,36 +295,26 @@ export function decodeTextureData(data: string): EarthTexture {
 }
 
 export function sampleEarth(texture: EarthTexture, latitude: number, longitude: number): number {
-  const normalizedLongitude = ((longitude / Math.PI) * 0.5 + 0.5) * texture.width;
-  const normalizedLatitude = (0.5 - latitude / Math.PI) * texture.height;
-  let x0 = Math.floor(normalizedLongitude);
-  let y0 = Math.floor(normalizedLatitude);
-  const xFraction = normalizedLongitude - x0;
-  const yFraction = normalizedLatitude - y0;
-  let x1 = x0 + 1;
-  let y1 = y0 + 1;
+  let x = Math.floor(((longitude / Math.PI) * 0.5 + 0.5) * texture.width);
+  let y = Math.floor((0.5 - latitude / Math.PI) * texture.height);
 
-  x0 = wrap(x0, texture.width);
-  x1 = wrap(x1, texture.width);
-  y0 = clamp(Math.trunc(y0), 0, texture.height - 1);
-  y1 = clamp(Math.trunc(y1), 0, texture.height - 1);
+  if (x >= texture.width) {
+    x -= texture.width;
+  } else if (x < 0) {
+    x += texture.width;
+  }
 
-  const topLeft = texture.mask[y0 * texture.width + x0] ?? 0;
-  const topRight = texture.mask[y0 * texture.width + x1] ?? 0;
-  const bottomLeft = texture.mask[y1 * texture.width + x0] ?? 0;
-  const bottomRight = texture.mask[y1 * texture.width + x1] ?? 0;
-  const top = topLeft + (topRight - topLeft) * xFraction;
-  const bottom = bottomLeft + (bottomRight - bottomLeft) * xFraction;
+  if (y < 0) {
+    y = 0;
+  } else if (y >= texture.height) {
+    y = texture.height - 1;
+  }
 
-  return (top + (bottom - top) * yFraction) / 255;
+  return (texture.mask[y * texture.width + x] ?? 0) / 255;
 }
 
 export function degToRad(degrees: number): number {
   return degrees * (Math.PI / 180);
-}
-
-export function radToDeg(radians: number): number {
-  return radians * (180 / Math.PI);
 }
 
 export const globeMotion = {
@@ -291,31 +327,9 @@ export const globeMotion = {
   spinRadiansPerSecond: 0.28,
 } as const;
 
-function rotateX(x: number, y: number, z: number, angle: number): [number, number, number] {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return [x, y * cos - z * sin, y * sin + z * cos];
-}
-
-function rotateY(x: number, y: number, z: number, angle: number): [number, number, number] {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return [x * cos + z * sin, y, -x * sin + z * cos];
-}
-
-function rotateZ(x: number, y: number, z: number, angle: number): [number, number, number] {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return [x * cos - y * sin, x * sin + y * cos, z];
-}
-
-function isNearInterval(value: number, interval: number, threshold: number): boolean {
-  const remainder = Math.abs((((value + interval / 2) % interval) + interval) % interval - interval / 2);
-  return remainder < threshold;
-}
-
-function wrap(value: number, max: number): number {
-  return ((value % max) + max) % max;
+function hashCoordinate(first: number, second: number, salt: number): number {
+  const value = Math.sin(first * 127.1 + second * 311.7 + salt * 74.7) * 43758.5453;
+  return value - Math.floor(value);
 }
 
 function clamp(value: number, min: number, max: number): number {
