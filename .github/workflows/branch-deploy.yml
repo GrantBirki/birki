@@ -4,14 +4,7 @@ on:
   issue_comment:
     types: [ created ]
 
-permissions:
-  pull-requests: write
-  deployments: write
-  contents: write
-  checks: read
-  pages: write
-  id-token: write
-  actions: read
+permissions: {}
 
 env:
   web_url: https://birki.io
@@ -27,6 +20,13 @@ jobs:
       contains(github.event.comment.body, '.wcid') ||
       contains(github.event.comment.body, '.unlock')) }}
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      deployments: write
+      contents: write
+      checks: read
+      actions: read
     outputs:
       continue: ${{ steps.branch-deploy.outputs.continue }}
       noop: ${{ steps.branch-deploy.outputs.noop }}
@@ -54,12 +54,15 @@ jobs:
     needs: trigger
     if: ${{ needs.trigger.outputs.continue == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6
         with:
           ref: ${{ needs.trigger.outputs.sha }}
+          persist-credentials: false
 
       - name: setup node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # pin@v6
@@ -85,6 +88,9 @@ jobs:
     needs: [ trigger, build ]
     if: ${{ needs.trigger.outputs.continue == 'true' && needs.trigger.outputs.noop != 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -98,6 +104,11 @@ jobs:
     needs: [ trigger, build, deploy ]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.trigger.outputs.continue == 'true' }}
+    permissions:
+      contents: write
+      deployments: write
+      pull-requests: write
+      issues: write
 
     steps:
       - name: set deployment status
