@@ -9,32 +9,32 @@ Instructions for building and testing locally
 ### Run
 
 ```shell
-npm i
-npm start
+npm ci
+npm run dev
+```
+
+### Lint
+
+```shell
+script/lint
+```
+
+### Test
+
+```shell
+script/test
 ```
 
 ### Build 🏗️
 
 ```shell
-npm run build
+script/build
 ```
 
 ## Deploy to GitHub Pages 🚀
 
-### Automatic Way
-
-When you merge a pull request, or push to the `main` branch, GitHub Actions will automatically build and deploy the site to GitHub Pages.
-
-### Manual Way
-
-To deploy to GitHub Pages, run the following command:
-
-```shell
-npm run deploy
-```
-
-> Don't forget to edit your `CNAME` file, the `package.json` file, and to update your Pages branch to `gh-pages` in your GitHub settings
+Pull requests can be deployed with a `.deploy` comment. The merge deployment path is protected by the branch-deploy merge gate and deploys `dist/` with GitHub Pages Actions when changes land on `main`.
 
 ## Icons 🎨
 
-Icons come from Font Awesome. Specifically, they come from [this page](https://www.w3schools.com/icons/fontawesome5_icons_objects.asp)
+Icons are local inline SVGs.
