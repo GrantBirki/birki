@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: branch deploy
-        uses: github/branch-deploy@fded0351b6b79f854b335c11b3d93063461dd288 # pin@v11
+        uses: github/branch-deploy@ddf8ca48e9cdb2d2c7c71dee428308b19af9313f # pin@v11.1.4
         id: branch-deploy
         with:
           trigger: ".deploy"
@@ -154,14 +154,14 @@ jobs:
 
       - name: rocket reaction
         if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS != 'failure' }}
-        uses: GrantBirki/comment@608e41b19bc973020ec0e189ebfdae935d7fe0cc # pin@v2.1.1
+        uses: GrantBirki/comment@3439715f0cf3b8fc29bf47be0e3226679c06c41a # pin@v3.0.0
         with:
           comment-id: ${{ needs.trigger.outputs.comment_id }}
           reactions: rocket
 
       - name: failure reaction
         if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS == 'failure' }}
-        uses: GrantBirki/comment@608e41b19bc973020ec0e189ebfdae935d7fe0cc # pin@v2.1.1
+        uses: GrantBirki/comment@3439715f0cf3b8fc29bf47be0e3226679c06c41a # pin@v3.0.0
         with:
           comment-id: ${{ needs.trigger.outputs.comment_id }}
           reactions: "-1"
