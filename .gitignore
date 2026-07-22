@@ -2,13 +2,8 @@
 
 .vscode
 
-# dependencies
+# local dependency artifacts (not used by this project)
 /node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
 
 # build
 build/
@@ -21,7 +16,4 @@ dist/
 .env.test.local
 .env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 tmp/

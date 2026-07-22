@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+required_version="v$(tr -d '[:space:]' < "${repo_root}/.node-version")"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "bootstrap: Node.js ${required_version} is required; no dependencies were installed." >&2
+  exit 1
+fi
+
+actual_version="$(node --version)"
+if [ "${actual_version}" != "${required_version}" ]; then
+  echo "bootstrap: expected Node.js ${required_version}, found ${actual_version}." >&2
+  exit 1
+fi
+
+echo "Node.js ${actual_version} is ready; this repository has no install step."

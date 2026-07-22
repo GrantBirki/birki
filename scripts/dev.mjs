@@ -57,7 +57,7 @@ function startServer() {
 }
 
 function startWatchers() {
-  const watchTargets = ["src", "public", "CNAME"];
+  const watchTargets = ["src", "public", "CNAME", "THIRD_PARTY_NOTICES.md"];
 
   for (const target of watchTargets) {
     const absoluteTarget = join(projectRoot, target);
@@ -95,7 +95,7 @@ async function runBuild(reason) {
   console.log(`Rebuilding (${reason})...`);
 
   const code = await new Promise((resolve) => {
-    const child = spawn("npm", ["run", "build"], {
+    const child = spawn(join(projectRoot, "script", "build"), [], {
       cwd: projectRoot,
       stdio: "inherit",
     });
