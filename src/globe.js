@@ -4,39 +4,29 @@ export class AsciiGlobe {
   static targetFrameMs = 1000 / 24;
 
   animationId = 0;
+  currentTime = 0;
   grid = configureGlobeGrid({ height: 720, width: 1280 });
   lastFrame = 0;
+  resizeAnimationId = 0;
+  startTime = 0;
 
-  constructor(
-    element,
-    reducedMotion,
-    texture,
-  ) {
+  constructor(element, texture) {
     this.element = element;
-    this.reducedMotion = reducedMotion;
     this.texture = texture;
-    this.resizeObserver = new ResizeObserver(() => {
-      this.configureGrid();
-      this.render(performance.now() / 1000);
-    });
+    this.textNode = element.ownerDocument.createTextNode("");
+    this.element.replaceChildren(this.textNode);
+    this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
     this.resizeObserver.observe(this.element.parentElement ?? this.element);
-    window.addEventListener("resize", () => {
-      this.configureGrid();
-      this.render(performance.now() / 1000);
-    }, { passive: true });
     this.configureGrid();
   }
 
   start() {
+    this.startTime = performance.now();
+    this.lastFrame = this.startTime;
     this.render(0);
-
-    if (this.reducedMotion) {
-      return;
-    }
 
     const tick = (now) => {
       this.animationId = window.requestAnimationFrame(tick);
-
       const elapsed = now - this.lastFrame;
 
       if (elapsed < AsciiGlobe.targetFrameMs) {
@@ -44,7 +34,8 @@ export class AsciiGlobe {
       }
 
       this.lastFrame = now - (elapsed % AsciiGlobe.targetFrameMs);
-      this.render(now / 1000);
+      this.currentTime = (now - this.startTime) / 1000;
+      this.render(this.currentTime);
     };
 
     this.animationId = window.requestAnimationFrame(tick);
@@ -52,6 +43,7 @@ export class AsciiGlobe {
 
   stop() {
     window.cancelAnimationFrame(this.animationId);
+    window.cancelAnimationFrame(this.resizeAnimationId);
     this.resizeObserver.disconnect();
   }
 
@@ -61,10 +53,21 @@ export class AsciiGlobe {
     this.element.style.setProperty("--ascii-font-size", `${this.grid.fontSize.toFixed(2)}px`);
   }
 
+  scheduleResize() {
+    if (this.resizeAnimationId !== 0) {
+      return;
+    }
+
+    this.resizeAnimationId = window.requestAnimationFrame(() => {
+      this.resizeAnimationId = 0;
+      this.configureGrid();
+      this.render(this.currentTime);
+    });
+  }
+
   render(time) {
-    this.element.textContent = renderAsciiGlobe({
+    this.textNode.data = renderAsciiGlobe({
       grid: this.grid,
-      reducedMotion: this.reducedMotion,
       texture: this.texture,
       time,
     }).text;
@@ -73,29 +76,70 @@ export class AsciiGlobe {
 
 export function configureGlobeGrid(bounds) {
   const mobile = bounds.width < 680;
-  const fontSize = clamp(
-    Math.min(bounds.width, bounds.height) / (mobile ? 78 : 92),
-    mobile ? 4.8 : 7.4,
-    mobile ? 6.25 : 10.5,
-  );
+  const minimumDimension = Math.min(bounds.width, bounds.height);
+  const fontSize = mobile
+    ? clamp(minimumDimension / 92, 4.4, 6)
+    : clamp(minimumDimension / 104, 7, 9.25);
   const cellWidth = fontSize * 0.61;
   const cellHeight = fontSize * 0.82;
+  const radius = minimumDimension * (mobile ? 0.46 : 0.465);
+  const columns = makeOdd(Math.ceil((radius * 2) / cellWidth) + 1);
+  const rows = makeOdd(Math.ceil((radius * 2) / cellHeight) + 1);
+  const grid = { cellHeight, cellWidth, columns, fontSize, radius, rows };
 
   return {
-    cellHeight,
-    cellWidth,
-    columns: Math.ceil(bounds.width / cellWidth) + 2,
-    fontSize,
-    radius: Math.min(bounds.width, bounds.height) * (mobile ? 0.46 : 0.465),
-    rows: Math.ceil(bounds.height / cellHeight) + 2,
+    ...grid,
+    rowSpans: createRowSpans(grid),
   };
 }
 
-export function renderAsciiGlobe(options) {
-  const { grid, reducedMotion, texture, time } = options;
-  const orientation = calculateOrientation(time, reducedMotion);
+export function createRowSpans(grid) {
   const centerX = (grid.columns - 1) / 2;
   const centerY = (grid.rows - 1) / 2;
+  const rowSpans = [];
+
+  for (let row = 0; row < grid.rows; row += 1) {
+    const y = ((centerY - row) * grid.cellHeight) / grid.radius;
+
+    if (Math.abs(y) > 1) {
+      rowSpans.push({
+        endColumn: 0,
+        radiusSquared: new Float32Array(0),
+        row,
+        startColumn: 0,
+        x: new Float32Array(0),
+        y,
+        z: new Float32Array(0),
+      });
+      continue;
+    }
+
+    const maximumX = Math.sqrt(Math.max(0, 1 - y * y));
+    const horizontalRadius = (maximumX * grid.radius) / grid.cellWidth;
+    const startColumn = clamp(Math.ceil(centerX - horizontalRadius), 0, grid.columns);
+    const endColumn = clamp(Math.floor(centerX + horizontalRadius) + 1, 0, grid.columns);
+    const cellCount = Math.max(0, endColumn - startColumn);
+    const radiusSquared = new Float32Array(cellCount);
+    const x = new Float32Array(cellCount);
+    const z = new Float32Array(cellCount);
+
+    for (let offset = 0; offset < cellCount; offset += 1) {
+      const column = startColumn + offset;
+      const normalizedX = ((column - centerX) * grid.cellWidth) / grid.radius;
+      const normalizedRadiusSquared = normalizedX * normalizedX + y * y;
+      x[offset] = normalizedX;
+      radiusSquared[offset] = normalizedRadiusSquared;
+      z[offset] = Math.sqrt(Math.max(0, 1 - normalizedRadiusSquared));
+    }
+
+    rowSpans.push({ endColumn, radiusSquared, row, startColumn, x, y, z });
+  }
+
+  return rowSpans;
+}
+
+export function renderAsciiGlobe({ grid, texture, time }) {
+  const orientation = calculateOrientation(time);
   const output = [];
   const tiltCos = Math.cos(orientation.axialTilt);
   const tiltSin = Math.sin(orientation.axialTilt);
@@ -104,31 +148,31 @@ export function renderAsciiGlobe(options) {
   const rotationCos = Math.cos(orientation.rotation);
   const rotationSin = Math.sin(orientation.rotation);
 
-  for (let row = 0; row < grid.rows; row += 1) {
-    let line = "";
+  for (const span of grid.rowSpans) {
+    let line = " ".repeat(span.startColumn);
 
-    for (let column = 0; column < grid.columns; column += 1) {
-      const x = ((column - centerX) * grid.cellWidth) / grid.radius;
-      const y = ((centerY - row) * grid.cellHeight) / grid.radius;
-      const radiusSquared = x * x + y * y;
-
-      if (radiusSquared > 1) {
-        line += " ";
-        continue;
-      }
-
-      const z = Math.sqrt(1 - radiusSquared);
-      const tiltedY = y * tiltCos - z * tiltSin;
-      const tiltedZ = y * tiltSin + z * tiltCos;
+    for (let offset = 0; offset < span.x.length; offset += 1) {
+      const x = span.x[offset];
+      const z = span.z[offset];
+      const tiltedY = span.y * tiltCos - z * tiltSin;
+      const tiltedZ = span.y * tiltSin + z * tiltCos;
       const rolledX = x * rollCos - tiltedY * rollSin;
       const rolledY = x * rollSin + tiltedY * rollCos;
       const rotatedX = rolledX * rotationCos + tiltedZ * rotationSin;
       const rotatedZ = -rolledX * rotationSin + tiltedZ * rotationCos;
-      const latitude = Math.asin(rolledY < -1 ? -1 : rolledY > 1 ? 1 : rolledY);
+      const latitude = Math.asin(clamp(rolledY, -1, 1));
       const longitude = Math.atan2(-rotatedZ, rotatedX);
-      line += glyphForCell(latitude, longitude, radiusSquared, column, row, texture);
+      line += glyphForCell(
+        latitude,
+        longitude,
+        span.radiusSquared[offset],
+        span.startColumn + offset,
+        span.row,
+        texture,
+      );
     }
 
+    line += " ".repeat(grid.columns - span.endColumn);
     output.push(line);
   }
 
@@ -138,18 +182,12 @@ export function renderAsciiGlobe(options) {
   };
 }
 
-export function calculateOrientation(time, reducedMotion) {
-  const rotation = reducedMotion
-    ? globeMotion.initialRotationRadians
-    : globeMotion.initialRotationRadians + time * globeMotion.spinRadiansPerSecond;
-  const axialTilt = reducedMotion
-    ? degToRad(-36)
-    : Math.sin(
-      time * globeMotion.axialDriftRadiansPerSecond + globeMotion.initialAxialDriftPhaseRadians,
-    ) * globeMotion.axialDriftRadians;
-  const roll = reducedMotion
-    ? 0
-    : Math.sin(time * globeMotion.rollRadiansPerSecond) * globeMotion.rollRadians;
+export function calculateOrientation(time) {
+  const rotation = globeMotion.initialRotationRadians + time * globeMotion.spinRadiansPerSecond;
+  const axialTilt = globeMotion.baseAxialTiltRadians + Math.sin(
+    time * globeMotion.axialDriftRadiansPerSecond + globeMotion.initialAxialDriftPhaseRadians,
+  ) * globeMotion.axialDriftRadians;
+  const roll = Math.sin(time * globeMotion.rollRadiansPerSecond) * globeMotion.rollRadians;
 
   return { axialTilt, roll, rotation };
 }
@@ -164,23 +202,17 @@ export function glyphForCell(
 ) {
   const land = sampleEarth(texture, latitude, longitude);
   const limb = radiusSquared > 0.9;
+  const geographicHash = hashCoordinate(
+    Math.round(latitude * 115),
+    Math.round(longitude * 115),
+    0,
+  );
 
   if (land >= 0.68) {
-    const geographicHash = hashCoordinate(
-      Math.round(latitude * 115),
-      Math.round(longitude * 115),
-      0,
-    );
     return "10+*x=%"[geographicHash * 7 | 0] ?? "%";
   }
 
   if (land >= 0.48) {
-    const geographicHash = hashCoordinate(
-      Math.round(latitude * 115),
-      Math.round(longitude * 115),
-      0,
-    );
-
     if (geographicHash < 0.14) {
       return ".";
     }
@@ -189,12 +221,6 @@ export function glyphForCell(
   }
 
   if (land >= 0.28) {
-    const geographicHash = hashCoordinate(
-      Math.round(latitude * 115),
-      Math.round(longitude * 115),
-      0,
-    );
-
     if (geographicHash > 0.94) {
       return "10+x"[geographicHash * 4 | 0] ?? "x";
     }
@@ -203,17 +229,11 @@ export function glyphForCell(
   }
 
   if (land >= 0.12) {
-    const geographicHash = hashCoordinate(
-      Math.round(latitude * 115),
-      Math.round(longitude * 115),
-      0,
-    );
     return geographicHash < land * 0.65 ? "." : " ";
   }
 
   if (limb) {
-    const screenHash = hashCoordinate(column, row, 37);
-    return screenHash > 0.28 ? "." : " ";
+    return hashCoordinate(column, row, 37) > 0.28 ? "." : " ";
   }
 
   return " ";
@@ -255,22 +275,37 @@ export function decodeTextureData(data) {
 }
 
 export function sampleEarth(texture, latitude, longitude) {
-  let x = Math.floor(((longitude / Math.PI) * 0.5 + 0.5) * texture.width);
-  let y = Math.floor((0.5 - latitude / Math.PI) * texture.height);
+  const wrappedX = positiveModulo(
+    ((longitude / Math.PI) * 0.5 + 0.5) * texture.width,
+    texture.width,
+  );
+  const clampedY = clamp(
+    (0.5 - latitude / Math.PI) * (texture.height - 1),
+    0,
+    texture.height - 1,
+  );
+  const x0 = Math.floor(wrappedX);
+  const x1 = (x0 + 1) % texture.width;
+  const y0 = Math.floor(clampedY);
+  const y1 = Math.min(y0 + 1, texture.height - 1);
+  const xWeight = wrappedX - x0;
+  const yWeight = clampedY - y0;
+  const northWest = texture.mask[y0 * texture.width + x0] ?? 0;
+  const northEast = texture.mask[y0 * texture.width + x1] ?? 0;
+  const southWest = texture.mask[y1 * texture.width + x0] ?? 0;
+  const southEast = texture.mask[y1 * texture.width + x1] ?? 0;
+  const north = northWest + (northEast - northWest) * xWeight;
+  const south = southWest + (southEast - southWest) * xWeight;
 
-  if (x >= texture.width) {
-    x -= texture.width;
-  } else if (x < 0) {
-    x += texture.width;
-  }
+  return (north + (south - north) * yWeight) / 255;
+}
 
-  if (y < 0) {
-    y = 0;
-  } else if (y >= texture.height) {
-    y = texture.height - 1;
-  }
-
-  return (texture.mask[y * texture.width + x] ?? 0) / 255;
+export function hashCoordinate(first, second, salt) {
+  let value = Math.imul(first ^ salt, 0x45d9f3b);
+  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
+  value ^= Math.imul(second, 0x27d4eb2d);
+  value = Math.imul(value ^ (value >>> 15), 0x85ebca6b);
+  return (value >>> 0) / 0x1_0000_0000;
 }
 
 export function degToRad(degrees) {
@@ -278,18 +313,23 @@ export function degToRad(degrees) {
 }
 
 export const globeMotion = {
-  axialDriftRadians: degToRad(44),
-  axialDriftRadiansPerSecond: 0.028,
-  initialAxialDriftPhaseRadians: -0.95,
+  axialDriftRadians: degToRad(4),
+  axialDriftRadiansPerSecond: 0.018,
+  baseAxialTiltRadians: degToRad(-23.4),
+  framesPerSecond: 24,
+  initialAxialDriftPhaseRadians: -Math.PI / 2,
   initialRotationRadians: degToRad(32),
-  rollRadians: degToRad(10),
-  rollRadiansPerSecond: 0.021,
-  spinRadiansPerSecond: 0.28,
+  rollRadians: degToRad(2),
+  rollRadiansPerSecond: 0.014,
+  spinRadiansPerSecond: 0.20,
 };
 
-function hashCoordinate(first, second, salt) {
-  const value = Math.sin(first * 127.1 + second * 311.7 + salt * 74.7) * 43758.5453;
-  return value - Math.floor(value);
+function positiveModulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function makeOdd(value) {
+  return value % 2 === 0 ? value + 1 : value;
 }
 
 function clamp(value, min, max) {
