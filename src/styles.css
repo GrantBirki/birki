@@ -9,7 +9,7 @@
   --grid-major: rgba(141, 144, 255, 0.058);
   --grid-dot: rgba(141, 144, 255, 0.105);
   --lavender: #8d90ff;
-  --lavender-deep: #646bff;
+  --lavender-deep: #4f56d9;
   --shadow: rgba(103, 92, 158, 0.1);
 }
 
@@ -26,7 +26,8 @@ body {
 
 body {
   min-height: 100svh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at 50% 45%, rgba(141, 144, 255, 0.095), transparent 31rem),
     radial-gradient(circle at 27% 74%, rgba(239, 229, 239, 0.48), transparent 27rem),
@@ -69,7 +70,7 @@ a {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: 100svh;
+  min-height: 100svh;
   display: grid;
   place-items: center;
   margin: 0;
@@ -77,44 +78,21 @@ a {
 
 .hero-surface {
   position: relative;
-  width: 100vw;
-  height: 100svh;
+  width: 100%;
+  min-height: 100svh;
   display: grid;
   place-items: center;
   overflow: hidden;
+  padding: clamp(2rem, 6vh, 4rem) 0;
   background:
     radial-gradient(circle at 50% 49%, rgba(255, 255, 255, 0.46), transparent 16rem),
     rgba(255, 255, 255, 0.28);
 }
 
-.hero-surface::before,
 .hero-surface::after {
   content: "";
   position: absolute;
   pointer-events: none;
-}
-
-.hero-surface::before {
-  inset: 0;
-  background:
-    linear-gradient(rgba(105, 114, 148, 0.038) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(105, 114, 148, 0.038) 1px, transparent 1px),
-    linear-gradient(rgba(141, 144, 255, 0.044) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(141, 144, 255, 0.044) 1px, transparent 1px);
-  background-size:
-    18px 18px,
-    18px 18px,
-    90px 90px,
-    90px 90px;
-  background-position:
-    -1px -1px,
-    -1px -1px,
-    -1px -1px,
-    -1px -1px;
-  opacity: 0.46;
-}
-
-.hero-surface::after {
   inset: 0;
   background:
     linear-gradient(90deg, transparent 49.98%, rgba(141, 144, 255, 0.09) 50%, transparent 50.02%),
@@ -167,11 +145,11 @@ a {
   letter-spacing: 0.015em;
   pointer-events: none;
   text-align: left;
-  text-shadow: 0 0 24px rgba(141, 144, 255, 0.18);
   transform: translate(-50%, -50%);
   user-select: none;
   white-space: pre;
   opacity: 0.72;
+  contain: paint style;
 }
 
 .lavender-wash {
@@ -210,7 +188,7 @@ h1 span {
 .tagline {
   margin: 0.88rem 0 0;
   color: var(--lavender-deep);
-  font-size: clamp(0.58rem, 0.68vw, 0.72rem);
+  font-size: clamp(0.68rem, 0.76vw, 0.78rem);
   font-weight: 760;
   line-height: 1.5;
   letter-spacing: 0.025em;
@@ -221,7 +199,7 @@ h1 span {
   width: min(24.25rem, 100%);
   margin: 1.25rem 0 0;
   color: #292e3d;
-  font-size: clamp(0.72rem, 0.78vw, 0.84rem);
+  font-size: clamp(0.85rem, 0.88vw, 0.95rem);
   font-weight: 460;
   line-height: 1.7;
 }
@@ -249,7 +227,7 @@ h1 span {
   justify-items: center;
   gap: 0.62rem;
   color: #353a75;
-  font-size: 0.54rem;
+  font-size: 0.625rem;
   font-weight: 760;
   letter-spacing: 0.035em;
   text-decoration: none;
@@ -275,10 +253,15 @@ h1 span {
     box-shadow 170ms ease;
 }
 
-.link-grid a:hover,
+.link-grid a:hover {
+  color: var(--lavender-deep);
+}
+
 .link-grid a:focus-visible {
   color: var(--lavender-deep);
-  outline: none;
+  border-radius: 8px;
+  outline: 2px solid var(--lavender-deep);
+  outline-offset: 4px;
 }
 
 .link-grid a:hover .icon-box {
@@ -294,8 +277,6 @@ h1 span {
 .link-grid a:focus-visible .icon-box {
   border-color: rgba(141, 144, 255, 0.76);
   color: var(--lavender-deep);
-  outline: 1.5px solid rgba(100, 107, 255, 0.58);
-  outline-offset: 2px;
   transform: translateY(-1px);
   box-shadow:
     0 10px 22px rgba(103, 92, 158, 0.13),
@@ -333,12 +314,12 @@ h1 span {
 
   .tagline {
     margin-top: 0.76rem;
-    font-size: 0.58rem;
+    font-size: 0.65rem;
   }
 
   .lede {
     margin-top: 1.08rem;
-    font-size: 0.74rem;
+    font-size: 0.85rem;
     line-height: 1.58;
   }
 
@@ -353,7 +334,7 @@ h1 span {
   }
 
   .link-grid a {
-    font-size: 0.5rem;
+    font-size: 0.56rem;
   }
 
   .icon-box {
@@ -364,20 +345,6 @@ h1 span {
   .link-grid svg {
     width: 1rem;
     height: 1rem;
-  }
-}
-
-@media (max-height: 700px) {
-  .lede {
-    margin-top: 1.25rem;
-  }
-
-  .lede::after {
-    margin-top: 1.2rem;
-  }
-
-  .link-grid {
-    margin-top: 1.45rem;
   }
 }
 
