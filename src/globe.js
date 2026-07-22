@@ -1,51 +1,16 @@
-export type EarthTexture = {
-  width: number;
-  height: number;
-  mask: Uint8Array;
-};
-
-export type GlobeBounds = {
-  width: number;
-  height: number;
-};
-
-export type GlobeGrid = {
-  cellHeight: number;
-  cellWidth: number;
-  columns: number;
-  fontSize: number;
-  radius: number;
-  rows: number;
-};
-
-export type GlobeOrientation = {
-  axialTilt: number;
-  roll: number;
-  rotation: number;
-};
-
-export type GlobeFrame = {
-  grid: GlobeGrid;
-  text: string;
-};
-
 const maxMaskCells = 5_000_000;
 
 export class AsciiGlobe {
-  private static readonly targetFrameMs = 1000 / 24;
+  static targetFrameMs = 1000 / 24;
 
-  private animationId = 0;
-  private grid = configureGlobeGrid({ height: 720, width: 1280 });
-  private lastFrame = 0;
-  private readonly element: HTMLPreElement;
-  private readonly reducedMotion: boolean;
-  private readonly texture: EarthTexture;
-  private readonly resizeObserver: ResizeObserver;
+  animationId = 0;
+  grid = configureGlobeGrid({ height: 720, width: 1280 });
+  lastFrame = 0;
 
   constructor(
-    element: HTMLPreElement,
-    reducedMotion: boolean,
-    texture: EarthTexture,
+    element,
+    reducedMotion,
+    texture,
   ) {
     this.element = element;
     this.reducedMotion = reducedMotion;
@@ -62,14 +27,14 @@ export class AsciiGlobe {
     this.configureGrid();
   }
 
-  start(): void {
+  start() {
     this.render(0);
 
     if (this.reducedMotion) {
       return;
     }
 
-    const tick = (now: number) => {
+    const tick = (now) => {
       this.animationId = window.requestAnimationFrame(tick);
 
       const elapsed = now - this.lastFrame;
@@ -85,18 +50,18 @@ export class AsciiGlobe {
     this.animationId = window.requestAnimationFrame(tick);
   }
 
-  stop(): void {
+  stop() {
     window.cancelAnimationFrame(this.animationId);
     this.resizeObserver.disconnect();
   }
 
-  private configureGrid(): void {
+  configureGrid() {
     const bounds = (this.element.parentElement ?? this.element).getBoundingClientRect();
     this.grid = configureGlobeGrid(bounds);
     this.element.style.setProperty("--ascii-font-size", `${this.grid.fontSize.toFixed(2)}px`);
   }
 
-  private render(time: number): void {
+  render(time) {
     this.element.textContent = renderAsciiGlobe({
       grid: this.grid,
       reducedMotion: this.reducedMotion,
@@ -106,7 +71,7 @@ export class AsciiGlobe {
   }
 }
 
-export function configureGlobeGrid(bounds: GlobeBounds): GlobeGrid {
+export function configureGlobeGrid(bounds) {
   const mobile = bounds.width < 680;
   const fontSize = clamp(
     Math.min(bounds.width, bounds.height) / (mobile ? 78 : 92),
@@ -126,17 +91,12 @@ export function configureGlobeGrid(bounds: GlobeBounds): GlobeGrid {
   };
 }
 
-export function renderAsciiGlobe(options: {
-  grid: GlobeGrid;
-  reducedMotion: boolean;
-  texture: EarthTexture;
-  time: number;
-}): GlobeFrame {
+export function renderAsciiGlobe(options) {
   const { grid, reducedMotion, texture, time } = options;
   const orientation = calculateOrientation(time, reducedMotion);
   const centerX = (grid.columns - 1) / 2;
   const centerY = (grid.rows - 1) / 2;
-  const output: string[] = [];
+  const output = [];
   const tiltCos = Math.cos(orientation.axialTilt);
   const tiltSin = Math.sin(orientation.axialTilt);
   const rollCos = Math.cos(orientation.roll);
@@ -178,7 +138,7 @@ export function renderAsciiGlobe(options: {
   };
 }
 
-export function calculateOrientation(time: number, reducedMotion: boolean): GlobeOrientation {
+export function calculateOrientation(time, reducedMotion) {
   const rotation = reducedMotion
     ? globeMotion.initialRotationRadians
     : globeMotion.initialRotationRadians + time * globeMotion.spinRadiansPerSecond;
@@ -195,13 +155,13 @@ export function calculateOrientation(time: number, reducedMotion: boolean): Glob
 }
 
 export function glyphForCell(
-  latitude: number,
-  longitude: number,
-  radiusSquared: number,
-  column: number,
-  row: number,
-  texture: EarthTexture,
-): string {
+  latitude,
+  longitude,
+  radiusSquared,
+  column,
+  row,
+  texture,
+) {
   const land = sampleEarth(texture, latitude, longitude);
   const limb = radiusSquared > 0.9;
 
@@ -259,7 +219,7 @@ export function glyphForCell(
   return " ";
 }
 
-export function decodeTextureData(data: string): EarthTexture {
+export function decodeTextureData(data) {
   const raw = atob(data);
   const bin = new Uint8Array(raw.length);
 
@@ -294,7 +254,7 @@ export function decodeTextureData(data: string): EarthTexture {
   return { width, height, mask };
 }
 
-export function sampleEarth(texture: EarthTexture, latitude: number, longitude: number): number {
+export function sampleEarth(texture, latitude, longitude) {
   let x = Math.floor(((longitude / Math.PI) * 0.5 + 0.5) * texture.width);
   let y = Math.floor((0.5 - latitude / Math.PI) * texture.height);
 
@@ -313,7 +273,7 @@ export function sampleEarth(texture: EarthTexture, latitude: number, longitude: 
   return (texture.mask[y * texture.width + x] ?? 0) / 255;
 }
 
-export function degToRad(degrees: number): number {
+export function degToRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
@@ -325,13 +285,13 @@ export const globeMotion = {
   rollRadians: degToRad(10),
   rollRadiansPerSecond: 0.021,
   spinRadiansPerSecond: 0.28,
-} as const;
+};
 
-function hashCoordinate(first: number, second: number, salt: number): number {
+function hashCoordinate(first, second, salt) {
   const value = Math.sin(first * 127.1 + second * 311.7 + salt * 74.7) * 43758.5453;
   return value - Math.floor(value);
 }
 
-function clamp(value: number, min: number, max: number): number {
+function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }

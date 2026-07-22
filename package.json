@@ -1,18 +1,5 @@
 {
   "name": "birki.io",
-  "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "lint": "npm run typecheck",
-    "test": "node --test --test-concurrency=1 --experimental-strip-types test/*.test.ts",
-    "test:performance": "node --test --test-concurrency=1 --experimental-strip-types test/performance.test.ts",
-    "typecheck": "tsc --noEmit",
-    "build": "node scripts/build.mjs && tsc --project tsconfig.json",
-    "preview": "node scripts/preview.mjs"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  }
+  "type": "module"
 }

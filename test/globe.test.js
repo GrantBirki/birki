@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import earthMap from "../src/earth-map.ts";
+import earthMap from "../src/earth-map.js";
 import {
   calculateOrientation,
   configureGlobeGrid,
@@ -9,7 +9,7 @@ import {
   glyphForCell,
   renderAsciiGlobe,
   sampleEarth,
-} from "../src/globe.ts";
+} from "../src/globe.js";
 
 const texture = decodeTextureData(earthMap);
 

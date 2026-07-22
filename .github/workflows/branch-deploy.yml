@@ -7,36 +7,38 @@ on:
 permissions: {}
 
 env:
-  web_url: https://birki.io
+  WEB_URL: https://birki.io
 
 jobs:
   trigger:
     if:
-      ${{ github.event.issue.pull_request &&
+      ${{ github.actor == github.repository_owner &&
+      github.event.issue.pull_request &&
       (contains(github.event.comment.body, '.deploy') ||
       contains(github.event.comment.body, '.lock') ||
       contains(github.event.comment.body, '.noop') ||
       contains(github.event.comment.body, '.help') ||
       contains(github.event.comment.body, '.wcid') ||
       contains(github.event.comment.body, '.unlock')) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
-      pull-requests: write
-      issues: write
-      deployments: write
-      contents: write
-      checks: read
       actions: read
+      checks: read
+      contents: write
+      deployments: write
+      issues: write
+      pull-requests: write
+      statuses: read
     outputs:
+      actor_handle: ${{ steps.branch-deploy.outputs.actor_handle }}
+      comment_id: ${{ steps.branch-deploy.outputs.comment_id }}
       continue: ${{ steps.branch-deploy.outputs.continue }}
-      noop: ${{ steps.branch-deploy.outputs.noop }}
       deployment_id: ${{ steps.branch-deploy.outputs.deployment_id }}
       environment: ${{ steps.branch-deploy.outputs.environment }}
+      initial_reaction_id: ${{ steps.branch-deploy.outputs.initial_reaction_id }}
+      noop: ${{ steps.branch-deploy.outputs.noop }}
       ref: ${{ steps.branch-deploy.outputs.ref }}
       sha: ${{ steps.branch-deploy.outputs.sha }}
-      comment_id: ${{ steps.branch-deploy.outputs.comment_id }}
-      initial_reaction_id: ${{ steps.branch-deploy.outputs.initial_reaction_id }}
-      actor_handle: ${{ steps.branch-deploy.outputs.actor_handle }}
 
     steps:
       - name: branch deploy
@@ -48,46 +50,91 @@ jobs:
           production_environments: "github-pages"
           environment_targets: "github-pages"
           skip_completing: "true"
+          allow_forks: "false"
+          commit_verification: "true"
+          checks: "all"
+          permissions: "admin"
           admins: "GrantBirki"
 
   build:
     needs: trigger
     if: ${{ needs.trigger.outputs.continue == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
     steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6
+      - name: validate checkout identities
+        id: validate
+        env:
+          CANDIDATE_SHA: ${{ needs.trigger.outputs.sha }}
+          TRUSTED_SHA: ${{ github.sha }}
+        run: |
+          sha_pattern='^[0-9a-f]{40}$'
+          [[ "${TRUSTED_SHA}" =~ ${sha_pattern} ]] || { echo "Invalid trusted SHA." >&2; exit 1; }
+          [[ "${CANDIDATE_SHA}" =~ ${sha_pattern} ]] || { echo "Invalid candidate SHA." >&2; exit 1; }
+          echo "trusted_path=trusted-main" >> "${GITHUB_OUTPUT}"
+          echo "working_path=candidate-${CANDIDATE_SHA}" >> "${GITHUB_OUTPUT}"
+
+      - name: checkout trusted build logic
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6.0.2
         with:
-          ref: ${{ needs.trigger.outputs.sha }}
+          ref: ${{ github.sha }}
+          path: ${{ steps.validate.outputs.trusted_path }}
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: setup node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # pin@v6
+      - name: checkout exact candidate content
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6.0.2
         with:
-          node-version-file: .node-version
-          cache: npm
+          ref: ${{ needs.trigger.outputs.sha }}
+          path: ${{ steps.validate.outputs.working_path }}
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: install dependencies
-        run: npm ci
+      - name: verify checkout identities
+        env:
+          CANDIDATE_SHA: ${{ needs.trigger.outputs.sha }}
+          TRUSTED_PATH: ${{ steps.validate.outputs.trusted_path }}
+          TRUSTED_SHA: ${{ github.sha }}
+          WORKING_PATH: ${{ steps.validate.outputs.working_path }}
+        run: |
+          actual_trusted_sha="$(git -C "${GITHUB_WORKSPACE}/${TRUSTED_PATH}" rev-parse HEAD)"
+          actual_candidate_sha="$(git -C "${GITHUB_WORKSPACE}/${WORKING_PATH}" rev-parse HEAD)"
+          test "${actual_trusted_sha}" = "${TRUSTED_SHA}"
+          test "${actual_candidate_sha}" = "${CANDIDATE_SHA}"
+
+      - name: build candidate with trusted logic
+        id: build
+        env:
+          CANDIDATE_SHA: ${{ needs.trigger.outputs.sha }}
+          TRUSTED_PATH: ${{ steps.validate.outputs.trusted_path }}
+          WORKING_PATH: ${{ steps.validate.outputs.working_path }}
+        run: |
+          artifact_root="$(mktemp -d "${RUNNER_TEMP}/birki-pages.XXXXXX")"
+          "${GITHUB_WORKSPACE}/${TRUSTED_PATH}/script/build" \
+            "${GITHUB_WORKSPACE}/${WORKING_PATH}" \
+            "${artifact_root}" \
+            "${CANDIDATE_SHA}"
+          echo "artifact_root=${artifact_root}" >> "${GITHUB_OUTPUT}"
 
       - name: configure pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # pin@v6
-
-      - name: build
-        run: bash script/build
+        if: ${{ needs.trigger.outputs.noop != 'true' }}
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # pin@v6.0.0
 
       - name: upload pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # pin@v5
+        if: ${{ needs.trigger.outputs.noop != 'true' }}
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # pin@v5.0.0
         with:
-          path: dist
+          path: ${{ steps.build.outputs.artifact_root }}
 
   deploy:
     needs: [ trigger, build ]
-    if: ${{ needs.trigger.outputs.continue == 'true' && needs.trigger.outputs.noop != 'true' }}
-    runs-on: ubuntu-latest
+    if: ${{ needs.trigger.outputs.continue == 'true' && needs.trigger.outputs.noop != 'true' && needs.build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages
+      queue: max
     permissions:
       pages: write
       id-token: write
@@ -98,92 +145,125 @@ jobs:
     steps:
       - name: deploy
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # pin@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # pin@v5.0.0
+
+  verify:
+    needs: [ trigger, deploy ]
+    if: ${{ needs.trigger.outputs.continue == 'true' && needs.trigger.outputs.noop != 'true' && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions: {}
+
+    steps:
+      - name: verify live source identity
+        env:
+          EXPECTED_SHA: ${{ needs.trigger.outputs.sha }}
+          WEB_URL: ${{ env.WEB_URL }}
+        run: |
+          for attempt in {1..12}; do
+            actual_sha="$(curl --fail --silent --show-error --location --max-time 10 "${WEB_URL}/version.txt?sha=${EXPECTED_SHA}&attempt=${attempt}" || true)"
+            if [ "${actual_sha}" = "${EXPECTED_SHA}" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Live version did not reach ${EXPECTED_SHA}." >&2
+          exit 1
 
   result:
-    needs: [ trigger, build, deploy ]
-    runs-on: ubuntu-latest
+    needs: [ trigger, build, deploy, verify ]
+    runs-on: ubuntu-24.04
     if: ${{ always() && needs.trigger.outputs.continue == 'true' }}
     permissions:
       contents: write
       deployments: write
-      pull-requests: write
       issues: write
 
     steps:
-      - name: set deployment status
-        id: deploy-status
-        if: ${{ needs.trigger.result == 'failure' || needs.build.result == 'failure' ||
-          needs.deploy.result == 'failure' }}
-        run: |
-          echo "DEPLOY_STATUS=failure" >> $GITHUB_OUTPUT
-
-      - name: create a deployment status
+      - name: calculate result
+        id: result
         env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          NOOP: ${{ needs.trigger.outputs.noop }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: |
+          status=success
+          if [ "${BUILD_RESULT}" != "success" ]; then
+            status=failure
+          elif [ "${NOOP}" != "true" ] && { [ "${DEPLOY_RESULT}" != "success" ] || [ "${VERIFY_RESULT}" != "success" ]; }; then
+            status=failure
+          fi
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+
+      - name: complete deployment status
+        env:
+          DEPLOYMENT_ID: ${{ needs.trigger.outputs.deployment_id }}
+          DEPLOY_STATUS: ${{ steps.result.outputs.status }}
+          ENVIRONMENT: ${{ needs.trigger.outputs.environment }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-          DEPLOY_STATUS: ${{ steps.deploy-status.outputs.DEPLOY_STATUS }}
         run: |
-          if [ -z "${DEPLOY_STATUS}" ]; then
-            DEPLOY_STATUS="success"
+          gh api \
+            --method POST \
+            "repos/${GH_REPO}/deployments/${DEPLOYMENT_ID}/statuses" \
+            -f environment="${ENVIRONMENT}" \
+            -f state="${DEPLOY_STATUS}"
+
+      - name: remove non-sticky lock
+        env:
+          ENVIRONMENT: ${{ needs.trigger.outputs.environment }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method DELETE \
+            "repos/${GH_REPO}/git/refs/heads/${ENVIRONMENT}-branch-deploy-lock"
+
+      - name: update command reaction
+        env:
+          COMMENT_ID: ${{ needs.trigger.outputs.comment_id }}
+          DEPLOY_STATUS: ${{ steps.result.outputs.status }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          INITIAL_REACTION_ID: ${{ needs.trigger.outputs.initial_reaction_id }}
+        run: |
+          gh api \
+            --method DELETE \
+            "repos/${GH_REPO}/issues/comments/${COMMENT_ID}/reactions/${INITIAL_REACTION_ID}"
+
+          reaction=rocket
+          if [ "${DEPLOY_STATUS}" = "failure" ]; then
+            reaction='-1'
           fi
 
           gh api \
             --method POST \
-            repos/{owner}/{repo}/deployments/${{ needs.trigger.outputs.deployment_id }}/statuses \
-            -f environment='${{ needs.trigger.outputs.environment }}' \
-            -f state=${DEPLOY_STATUS}
+            "repos/${GH_REPO}/issues/comments/${COMMENT_ID}/reactions" \
+            -f content="${reaction}"
 
-      - name: remove a non-sticky lock
+      - name: post result comment
         env:
+          ACTOR_HANDLE: ${{ needs.trigger.outputs.actor_handle }}
+          CANDIDATE_REF: ${{ needs.trigger.outputs.ref }}
+          CANDIDATE_SHA: ${{ needs.trigger.outputs.sha }}
+          DEPLOY_STATUS: ${{ steps.result.outputs.status }}
+          ENVIRONMENT: ${{ needs.trigger.outputs.environment }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          NOOP: ${{ needs.trigger.outputs.noop }}
+          WEB_URL: ${{ env.WEB_URL }}
         run: |
+          if [ "${DEPLOY_STATUS}" = "failure" ]; then
+            body="$(printf '### Deployment Results ❌\n\n**%s** had a failure while validating `%s` for **%s** at commit `%s`.' "${ACTOR_HANDLE}" "${CANDIDATE_REF}" "${ENVIRONMENT}" "${CANDIDATE_SHA}")"
+          elif [ "${NOOP}" = "true" ]; then
+            body="$(printf '### Noop Results ✅\n\n**%s** successfully validated `%s` for **%s** at commit `%s` without changing GitHub Pages.' "${ACTOR_HANDLE}" "${CANDIDATE_REF}" "${ENVIRONMENT}" "${CANDIDATE_SHA}")"
+          else
+            body="$(printf '### Deployment Results ✅\n\n**%s** successfully deployed `%s` to **%s** at commit `%s`.\n\n[View live deployment](%s)' "${ACTOR_HANDLE}" "${CANDIDATE_REF}" "${ENVIRONMENT}" "${CANDIDATE_SHA}" "${WEB_URL}")"
+          fi
+
           gh api \
-            --method DELETE \
-            repos/{owner}/{repo}/git/refs/heads/${{ needs.trigger.outputs.environment }}-branch-deploy-lock
-
-      - name: remove eyes reaction
-        env:
-          GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api \
-            --method DELETE \
-            repos/{owner}/{repo}/issues/comments/${{ needs.trigger.outputs.comment_id }}/reactions/${{ needs.trigger.outputs.initial_reaction_id }}
-
-      - name: rocket reaction
-        if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS != 'failure' }}
-        uses: GrantBirki/comment@3439715f0cf3b8fc29bf47be0e3226679c06c41a # pin@v3.0.0
-        with:
-          comment-id: ${{ needs.trigger.outputs.comment_id }}
-          reactions: rocket
-
-      - name: failure reaction
-        if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS == 'failure' }}
-        uses: GrantBirki/comment@3439715f0cf3b8fc29bf47be0e3226679c06c41a # pin@v3.0.0
-        with:
-          comment-id: ${{ needs.trigger.outputs.comment_id }}
-          reactions: "-1"
-
-      - name: success comment
-        if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS != 'failure' }}
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # pin@v5.0.0
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            ### Deployment Results ✅
-
-            **${{ needs.trigger.outputs.actor_handle }}** successfully deployed branch `${{ needs.trigger.outputs.ref }}` to **${{ needs.trigger.outputs.environment }}** at commit `${{ needs.trigger.outputs.sha }}`
-
-            > [View Live Deployment](${{ env.web_url }}) :link:
-
-      - name: failure comment
-        if: ${{ steps.deploy-status.outputs.DEPLOY_STATUS == 'failure' }}
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # pin@v5.0.0
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            ### Deployment Results ❌
-
-            **${{ needs.trigger.outputs.actor_handle }}** had a failure when deploying `${{ needs.trigger.outputs.ref }}` to **${{ needs.trigger.outputs.environment }}** at commit `${{ needs.trigger.outputs.sha }}`
+            --method POST \
+            "repos/${GH_REPO}/issues/${ISSUE_NUMBER}/comments" \
+            -f body="${body}"

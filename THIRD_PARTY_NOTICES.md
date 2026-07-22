@@ -1,6 +1,8 @@
 # Third-Party Notices
 
-This project includes generated earth texture data adapted from `jcubic/ascii-globe`.
+This project includes generated earth texture data adapted from `jcubic/ascii-globe` at commit `015566a3150ba3f3a72feb008adf7e698945d1ce`.
+
+Source: https://github.com/jcubic/ascii-globe/blob/015566a3150ba3f3a72feb008adf7e698945d1ce/src/maps/earth.ts
 
 ## jcubic/ascii-globe
 

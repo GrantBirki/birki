@@ -5,7 +5,7 @@ import { contentTypeFor, resolveStaticPath } from "../scripts/static-files.mjs";
 
 const indexHtml = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
 const stylesCss = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
-const buildScript = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
+const buildScript = await readFile(new URL("../script/build", import.meta.url), "utf8");
 
 test("page has the expected accessible landmark and heading structure", () => {
   assert.match(indexHtml, /<html lang="en">/);

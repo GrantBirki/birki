@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { test } from "node:test";
-import earthMap from "../src/earth-map.ts";
-import { configureGlobeGrid, decodeTextureData, renderAsciiGlobe } from "../src/globe.ts";
+import earthMap from "../src/earth-map.js";
+import { configureGlobeGrid, decodeTextureData, renderAsciiGlobe } from "../src/globe.js";
 
 const texture = decodeTextureData(earthMap);
 
 test("desktop globe render stays within the 30 FPS frame budget", (t) => {
   const grid = configureGlobeGrid({ height: 1248, width: 1674 });
-  const samples: number[] = [];
+  const samples = [];
 
   for (let i = 0; i < 4; i += 1) {
     renderAsciiGlobe({ grid, reducedMotion: false, texture, time: i });
@@ -30,7 +30,7 @@ test("desktop globe render stays within the 30 FPS frame budget", (t) => {
 
 test("mobile globe render has ample headroom", (t) => {
   const grid = configureGlobeGrid({ height: 667, width: 375 });
-  const samples: number[] = [];
+  const samples = [];
 
   for (let i = 0; i < 30; i += 1) {
     const start = performance.now();

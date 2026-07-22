@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: pages
+  queue: max
 
 defaults:
   run:
@@ -23,7 +23,8 @@ defaults:
 
 jobs:
   deployment-check:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
     outputs:
       continue: ${{ steps.deployment-check.outputs.continue }}
 
@@ -36,40 +37,46 @@ jobs:
           environment: github-pages
 
   build:
-    if: ${{ needs.deployment-check.outputs.continue == 'true' }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || needs.deployment-check.outputs.continue == 'true') }}
     needs: deployment-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6
+      - name: checkout exact source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6.0.2
         with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: setup node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # pin@v6
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: install dependencies
-        run: npm ci
+      - name: verify source
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          test "${actual_sha}" = "${EXPECTED_SHA}"
 
       - name: configure pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # pin@v6
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # pin@v6.0.0
 
-      - name: build
-        run: bash script/build
+      - name: build exact source
+        id: build
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          artifact_root="$(mktemp -d "${RUNNER_TEMP}/birki-pages.XXXXXX")"
+          script/build "${GITHUB_WORKSPACE}" "${artifact_root}" "${SOURCE_SHA}"
+          echo "artifact_root=${artifact_root}" >> "${GITHUB_OUTPUT}"
 
       - name: upload pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # pin@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # pin@v5.0.0
         with:
-          path: dist
+          path: ${{ steps.build.outputs.artifact_root }}
 
   deploy:
-    if: ${{ needs.deployment-check.outputs.continue == 'true' }}
-    needs: [ deployment-check, build ]
-    runs-on: ubuntu-latest
+    if: ${{ needs.build.result == 'success' }}
+    needs: build
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -80,4 +87,26 @@ jobs:
     steps:
       - name: deploy to github pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # pin@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # pin@v5.0.0
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions: {}
+
+    steps:
+      - name: verify live source identity
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          WEB_URL: https://birki.io
+        run: |
+          for attempt in {1..12}; do
+            actual_sha="$(curl --fail --silent --show-error --location --max-time 10 "${WEB_URL}/version.txt?sha=${EXPECTED_SHA}&attempt=${attempt}" || true)"
+            if [ "${actual_sha}" = "${EXPECTED_SHA}" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Live version did not reach ${EXPECTED_SHA}." >&2
+          exit 1

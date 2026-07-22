@@ -1,15 +1,92 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v npm >/dev/null 2>&1; then
-  echo "npm is required to build the site." >&2
-  echo "Install Node.js using the version in .node-version, then run: npm install" >&2
+export LC_ALL=C
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+source_input="${1:-${repo_root}}"
+output_input="${2:-${repo_root}/dist}"
+source_sha="${3:-development}"
+
+fail() {
+  echo "build: $*" >&2
   exit 1
+}
+
+[ -n "${source_input}" ] || fail "source root must not be empty"
+[ -n "${output_input}" ] || fail "output root must not be empty"
+[ -d "${source_input}" ] || fail "source root does not exist: ${source_input}"
+[ ! -L "${source_input}" ] || fail "source root must not be a symlink"
+
+source_root="$(cd "${source_input}" && pwd -P)"
+[ "${source_root}" != "/" ] || fail "source root must not be the filesystem root"
+
+output_parent_input="$(dirname "${output_input}")"
+output_name="$(basename "${output_input}")"
+case "${output_name}" in
+  ""|"."|"..") fail "output root is unsafe: ${output_input}" ;;
+esac
+[ -d "${output_parent_input}" ] || fail "output parent does not exist: ${output_parent_input}"
+output_parent="$(cd "${output_parent_input}" && pwd -P)"
+output_root="${output_parent}/${output_name}"
+[ "${output_root}" != "/" ] || fail "output root must not be the filesystem root"
+[ "${output_root}" != "${source_root}" ] || fail "output root must not equal source root"
+[ ! -L "${output_root}" ] || fail "output root must not be a symlink"
+[ ! -e "${output_root}" ] || [ -d "${output_root}" ] || fail "output root must be a directory"
+
+case "${source_root}/" in
+  "${output_root}/"*) fail "output root must not contain source root" ;;
+esac
+case "${output_root}/" in
+  "${source_root}/"*) [ "${output_root}" = "${source_root}/dist" ] || fail "only dist may be built inside source root" ;;
+esac
+
+if [ "${source_sha}" != "development" ] && [[ ! "${source_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+  fail "source SHA must be development or 40 lowercase hexadecimal characters"
 fi
 
-if [ ! -d "node_modules" ]; then
-  echo "Missing node_modules. Run: npm install" >&2
-  exit 1
-fi
+for directory in src public; do
+  [ -d "${source_root}/${directory}" ] || fail "missing source directory: ${directory}"
+  [ ! -L "${source_root}/${directory}" ] || fail "source directory must not be a symlink: ${directory}"
+done
 
-npm run build
+source_files=(
+  "src/index.html"
+  "src/styles.css"
+  "src/earth-map.js"
+  "src/globe.js"
+  "src/main.js"
+  "public/favicon.ico"
+  "public/manifest.json"
+  "CNAME"
+  "THIRD_PARTY_NOTICES.md"
+)
+output_files=(
+  "index.html"
+  "styles.css"
+  "assets/earth-map.js"
+  "assets/globe.js"
+  "assets/main.js"
+  "favicon.ico"
+  "manifest.json"
+  "CNAME"
+  "THIRD_PARTY_NOTICES.md"
+)
+
+for relative_path in "${source_files[@]}"; do
+  [ -f "${source_root}/${relative_path}" ] || fail "missing source file: ${relative_path}"
+  [ ! -L "${source_root}/${relative_path}" ] || fail "source file must not be a symlink: ${relative_path}"
+done
+
+rm -rf "${output_root}"
+mkdir -p "${output_root}/assets"
+
+for index in "${!source_files[@]}"; do
+  destination="${output_root}/${output_files[$index]}"
+  mkdir -p "$(dirname "${destination}")"
+  cp "${source_root}/${source_files[$index]}" "${destination}"
+  chmod 0644 "${destination}"
+done
+
+printf '%s\n' "${source_sha}" > "${output_root}/version.txt"
+chmod 0644 "${output_root}/version.txt"

@@ -12,22 +12,17 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v6.0.2
         with:
           persist-credentials: false
 
-      - name: setup node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # pin@v6
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: install dependencies
-        run: npm ci
-
       - name: build
-        run: bash script/build
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          output_root="$(mktemp -d "${RUNNER_TEMP}/birki-build.XXXXXX")"
+          script/build "${GITHUB_WORKSPACE}" "${output_root}" "${SOURCE_SHA}"

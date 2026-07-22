@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v npm >/dev/null 2>&1; then
-  echo "npm is required to lint the site." >&2
-  echo "Install Node.js using the version in .node-version, then run: npm install" >&2
-  exit 1
-fi
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${repo_root}"
+script/bootstrap
 
-if [ ! -d "node_modules" ]; then
-  echo "Missing node_modules. Run: npm install" >&2
-  exit 1
-fi
-
-npm run lint
+while IFS= read -r file; do
+  node --check "${file}"
+done < <(find src scripts test -type f \( -name '*.js' -o -name '*.mjs' \) | LC_ALL=C sort)
