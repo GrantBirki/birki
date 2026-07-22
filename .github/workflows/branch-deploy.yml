@@ -197,6 +197,7 @@ jobs:
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
 
       - name: complete deployment status
+        if: ${{ needs.trigger.outputs.noop != 'true' && needs.trigger.outputs.deployment_id != '' }}
         env:
           DEPLOYMENT_ID: ${{ needs.trigger.outputs.deployment_id }}
           DEPLOY_STATUS: ${{ steps.result.outputs.status }}
