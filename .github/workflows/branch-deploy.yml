@@ -227,12 +227,7 @@ jobs:
           DEPLOY_STATUS: ${{ steps.result.outputs.status }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-          INITIAL_REACTION_ID: ${{ needs.trigger.outputs.initial_reaction_id }}
         run: |
-          gh api \
-            --method DELETE \
-            "repos/${GH_REPO}/issues/comments/${COMMENT_ID}/reactions/${INITIAL_REACTION_ID}"
-
           reaction=rocket
           if [ "${DEPLOY_STATUS}" = "failure" ]; then
             reaction='-1'
