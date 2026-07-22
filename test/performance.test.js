@@ -6,42 +6,48 @@ import { configureGlobeGrid, decodeTextureData, renderAsciiGlobe } from "../src/
 
 const texture = decodeTextureData(earthMap);
 
-test("desktop globe render stays within the 30 FPS frame budget", (t) => {
-  const grid = configureGlobeGrid({ height: 1248, width: 1674 });
+test("desktop globe render stays within its median and p95 budgets", (t) => {
+  for (const bounds of [
+    { height: 1248, width: 1674 },
+    { height: 1440, width: 2560 },
+  ]) {
+    const result = measureRender(bounds);
+    t.diagnostic(`${bounds.width}x${bounds.height} median=${result.median.toFixed(2)}ms p95=${result.p95.toFixed(2)}ms max=${result.maximum.toFixed(2)}ms`);
+    assert.ok(result.median < 12, `median render ${result.median.toFixed(2)}ms should stay under 12ms`);
+    assert.ok(result.p95 < 24, `p95 render ${result.p95.toFixed(2)}ms should stay under 24ms`);
+  }
+});
+
+test("mobile globe render stays within its median and p95 budgets", (t) => {
+  const result = measureRender({ height: 667, width: 375 });
+
+  t.diagnostic(`mobile median=${result.median.toFixed(2)}ms p95=${result.p95.toFixed(2)}ms max=${result.maximum.toFixed(2)}ms`);
+  assert.ok(result.median < 8, `median mobile render ${result.median.toFixed(2)}ms should stay under 8ms`);
+  assert.ok(result.p95 < 16, `p95 mobile render ${result.p95.toFixed(2)}ms should stay under 16ms`);
+});
+
+function measureRender(bounds) {
+  const grid = configureGlobeGrid(bounds);
   const samples = [];
 
-  for (let i = 0; i < 4; i += 1) {
-    renderAsciiGlobe({ grid, reducedMotion: false, texture, time: i });
+  for (let index = 0; index < 12; index += 1) {
+    renderAsciiGlobe({ grid, texture, time: index * 0.25 });
   }
 
-  for (let i = 0; i < 20; i += 1) {
+  for (let index = 0; index < 60; index += 1) {
     const start = performance.now();
-    renderAsciiGlobe({ grid, reducedMotion: false, texture, time: i * 0.25 });
+    renderAsciiGlobe({ grid, texture, time: index * 0.25 });
     samples.push(performance.now() - start);
   }
 
-  const mean = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
-  const worst = Math.max(...samples);
+  samples.sort((first, second) => first - second);
+  return {
+    maximum: samples.at(-1),
+    median: percentile(samples, 0.5),
+    p95: percentile(samples, 0.95),
+  };
+}
 
-  t.diagnostic(`desktop ASCII render mean=${mean.toFixed(2)}ms worst=${worst.toFixed(2)}ms`);
-  assert.ok(mean < 16, `mean render ${mean.toFixed(2)}ms should stay under 16ms`);
-  assert.ok(worst < 33, `worst render ${worst.toFixed(2)}ms should leave room for browser work`);
-});
-
-test("mobile globe render has ample headroom", (t) => {
-  const grid = configureGlobeGrid({ height: 667, width: 375 });
-  const samples = [];
-
-  for (let i = 0; i < 30; i += 1) {
-    const start = performance.now();
-    renderAsciiGlobe({ grid, reducedMotion: false, texture, time: i * 0.25 });
-    samples.push(performance.now() - start);
-  }
-
-  const mean = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
-  const worst = Math.max(...samples);
-
-  t.diagnostic(`mobile ASCII render mean=${mean.toFixed(2)}ms worst=${worst.toFixed(2)}ms`);
-  assert.ok(mean < 10, `mean mobile render ${mean.toFixed(2)}ms should stay under 10ms`);
-  assert.ok(worst < 24, `worst mobile render ${worst.toFixed(2)}ms should leave room for browser work`);
-});
+function percentile(samples, percentileValue) {
+  return samples[Math.ceil(samples.length * percentileValue) - 1];
+}
