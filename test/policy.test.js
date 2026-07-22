@@ -43,6 +43,7 @@ test("branch deployment keeps trusted logic separate from candidate content", ()
   assert.match(workflow, /"\$\{GITHUB_WORKSPACE\}\/\$\{TRUSTED_PATH\}\/script\/build"/);
   assert.doesNotMatch(workflow, /\$\{WORKING_PATH\}\/script\//);
   assert.doesNotMatch(workflow, /- name: update command reaction/);
+  assert.match(workflow, /result:[\s\S]*?permissions:[\s\S]*?pull-requests: write[\s\S]*?steps:/);
   assert.match(workflow, /- name: complete deployment status\n\s+if: \$\{\{ needs\.trigger\.outputs\.noop != 'true' && needs\.trigger\.outputs\.deployment_id != '' \}\}/);
   assert.match(workflow, /version\.txt\?sha=\$\{EXPECTED_SHA\}/);
 });
