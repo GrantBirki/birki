@@ -221,23 +221,6 @@ jobs:
             --method DELETE \
             "repos/${GH_REPO}/git/refs/heads/${ENVIRONMENT}-branch-deploy-lock"
 
-      - name: update command reaction
-        env:
-          COMMENT_ID: ${{ needs.trigger.outputs.comment_id }}
-          DEPLOY_STATUS: ${{ steps.result.outputs.status }}
-          GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          reaction=rocket
-          if [ "${DEPLOY_STATUS}" = "failure" ]; then
-            reaction='-1'
-          fi
-
-          gh api \
-            --method POST \
-            "repos/${GH_REPO}/issues/comments/${COMMENT_ID}/reactions" \
-            -f content="${reaction}"
-
       - name: post result comment
         env:
           ACTOR_HANDLE: ${{ needs.trigger.outputs.actor_handle }}
