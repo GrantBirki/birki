@@ -177,7 +177,7 @@ jobs:
     permissions:
       contents: write
       deployments: write
-      issues: write
+      pull-requests: write
 
     steps:
       - name: calculate result
