@@ -41,6 +41,10 @@ jobs:
       sha: ${{ steps.branch-deploy.outputs.sha }}
 
     steps:
+      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+        with:
+          mode: audit
+
       - name: branch deploy
         uses: github/branch-deploy@ddf8ca48e9cdb2d2c7c71dee428308b19af9313f # pin@v11.1.4
         id: branch-deploy
@@ -64,6 +68,10 @@ jobs:
       contents: read
 
     steps:
+      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+        with:
+          mode: audit
+
       - name: validate checkout identities
         id: validate
         env:
@@ -143,6 +151,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+        with:
+          mode: audit
+
       - name: deploy
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # pin@v5.0.0
@@ -154,6 +166,10 @@ jobs:
     permissions: {}
 
     steps:
+      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+        with:
+          mode: audit
+
       - name: verify live source identity
         env:
           EXPECTED_SHA: ${{ needs.trigger.outputs.sha }}
@@ -180,6 +196,10 @@ jobs:
       pull-requests: write
 
     steps:
+      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+        with:
+          mode: audit
+
       - name: calculate result
         id: result
         env:
