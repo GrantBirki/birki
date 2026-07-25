@@ -44,7 +44,7 @@ jobs:
       - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
 
       - name: branch deploy
-        uses: github/branch-deploy@ddf8ca48e9cdb2d2c7c71dee428308b19af9313f # pin@v11.1.4
+        uses: github/branch-deploy@f0984057ffe1aa340aa017b6eafb894310aed88e # pin@v12.0.0
         id: branch-deploy
         with:
           trigger: ".deploy"
