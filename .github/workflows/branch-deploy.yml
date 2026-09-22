@@ -42,7 +42,7 @@ jobs:
       sha: ${{ steps.branch-deploy.outputs.sha }}
 
     steps:
-      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
 
       - name: branch deploy
         uses: grantbirki/branch-deploy@a7a7ea40a15a79a036322c2924ab74f5eded702c # pin@v12.1.0
@@ -67,7 +67,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
         with:
           mode: audit
 
@@ -84,7 +84,7 @@ jobs:
           echo "working_path=candidate-${CANDIDATE_SHA}" >> "${GITHUB_OUTPUT}"
 
       - name: checkout trusted build logic
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # pin@v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pin@v7.0.1
         with:
           ref: ${{ github.sha }}
           path: ${{ steps.validate.outputs.trusted_path }}
@@ -92,7 +92,7 @@ jobs:
           persist-credentials: false
 
       - name: checkout exact candidate content
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # pin@v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pin@v7.0.1
         with:
           ref: ${{ needs.trigger.outputs.sha }}
           path: ${{ steps.validate.outputs.working_path }}
@@ -150,7 +150,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
 
       - name: deploy
         id: deployment
@@ -163,7 +163,7 @@ jobs:
     permissions: {}
 
     steps:
-      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
         with:
           allowlist: |
             hostname birki.io tcp 443
@@ -194,7 +194,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: openai/fence@db291f5c51949e6e6ec1634621b36dc4bbf3d54a # pin@v0.8.7
+      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
 
       - name: calculate result
         id: result
