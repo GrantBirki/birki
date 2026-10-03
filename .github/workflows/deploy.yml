@@ -21,6 +21,8 @@ defaults:
   run:
     shell: bash
 
+cache-mode: none
+
 jobs:
   deployment-check:
     if: ${{ github.event_name == 'push' }}
