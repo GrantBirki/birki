@@ -9,6 +9,8 @@ permissions: {}
 env:
   WEB_URL: https://birki.io
 
+cache-mode: none
+
 jobs:
   trigger:
     if:
