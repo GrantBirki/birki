@@ -31,7 +31,7 @@ jobs:
       continue: ${{ steps.deployment-check.outputs.continue }}
 
     steps:
-      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
+      - uses: openai/fence@530cce8d45da60a7c353da45511639ad5e154e9a # pin@v0.10.1
 
       - name: deployment check
         uses: grantbirki/branch-deploy@a7a7ea40a15a79a036322c2924ab74f5eded702c # pin@v12.1.0
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
+      - uses: openai/fence@530cce8d45da60a7c353da45511639ad5e154e9a # pin@v0.10.1
         with:
           mode: audit
 
@@ -93,7 +93,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
+      - uses: openai/fence@530cce8d45da60a7c353da45511639ad5e154e9a # pin@v0.10.1
 
       - name: deploy to github pages
         id: deployment
@@ -105,7 +105,7 @@ jobs:
     permissions: {}
 
     steps:
-      - uses: openai/fence@e6b39c80c51cb2b2a39448ddeff74b3b886c0a63 # pin@v0.10.0
+      - uses: openai/fence@530cce8d45da60a7c353da45511639ad5e154e9a # pin@v0.10.1
         with:
           allowlist: |
             hostname birki.io tcp 443
