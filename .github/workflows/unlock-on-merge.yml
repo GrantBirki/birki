@@ -17,7 +17,9 @@ jobs:
     if: github.event.pull_request.merged == true
 
     steps:
-      - uses: openai/fence@63c516e78543f3d8d6088ebad6475a39920863bd # pin@v0.10.2
+      - uses: openai/fence@9d10445098284f8e8bbf67495fc8c2eaa34c28c5 # pin@v0.12.7
+        name: fence
+        if: runner.environment == 'github-hosted' && runner.os == 'Linux' && runner.arch == 'X64'
 
       - name: unlock on merge
         uses: grantbirki/branch-deploy@7173dcbb72a30da0148076fade87260ddd1b5e28 # pin@v12.4.2
